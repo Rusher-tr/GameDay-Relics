@@ -11,7 +11,7 @@ app.use(
 );
 
 app.use(express.json({ limit: "10mb" }));
-app.use(urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // urlencoded is used to parse incoming requests with urlencoded payloads
 // extended allows to use obj in obj etc and limit is size limit
 

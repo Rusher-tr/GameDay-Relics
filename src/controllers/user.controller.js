@@ -3,6 +3,7 @@ import { APIError } from "../utils/Apierror.js";
 import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details
@@ -14,17 +15,33 @@ const registerUser = asyncHandler(async (req, res) => {
   // bellow given will check if any one of the fields provided is null or not by some method
   // this some method will take arguments and check each element in array and returns T/F
 
-  if (
-    [email, username, password, role].some((field) => field?.trim() === "")
-  ) {
-    throw new APIError(400, "All fields are required");
+  // if (
+  //   [email, username, password, role].some((field) => field?.trim() === "")
+  // ) {
+  //   throw new APIError(400, "All fields are required");
+  // }
+
+  // // existing user check
+
+  // const existedUser = await User.findOne({
+  //   $or: [{ username }, { email } ,{ role }],
+  // });
+
+  // check required fields only
+  if ([email, username, password].some((field) => !field || field.trim() === "")) {
+    throw new APIError(400, "Email, username, and password are required");
   }
 
-  // existing user check
+  // optional role validation — only if it's provided
+  if (role && role.trim() === "") {
+    throw new APIError(400, "Role cannot be empty if provided");
+  }
 
+  // check if user already exists
   const existedUser = await User.findOne({
-    $or: [{ username }, { email } ,{ role }],
+    $or: [{ username }, { email }],
   });
+
 
   if (existedUser) {
     throw new APIError(409, "email or username already exists");
