@@ -1,6 +1,6 @@
-import { asyncHandler } from "../utils/asyncHandler";
-import { APIError } from "../utils/Apierror";
-import { Product } from "../models/user.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { APIError } from "../utils/Apierror.js";
+import { Product } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose  from "mongoose";
 import Product from "../models/product.models.js"
