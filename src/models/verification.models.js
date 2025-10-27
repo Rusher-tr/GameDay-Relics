@@ -10,16 +10,16 @@ const verificationSchema = new Schema(
       type: Boolean,
     },
     verificationBy: {
-      type: string,
+      type: String,
     },
     verificationId: {
-      type: string,
+      type: String,
     },
     certificationBy: {
-      type: string,
+      type: String,
     },
     certificationId: {
-      type: string,
+      type: String,
     },
     verifiedAt: {
       type: Date,
@@ -28,4 +28,4 @@ const verificationSchema = new Schema(
   { timestamps: true }
 );
 
-export const verification = mongoose.mondel("Verification", verificationSchema);
+export const Verification = mongoose.model("Verification", verificationSchema);

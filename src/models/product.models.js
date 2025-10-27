@@ -26,7 +26,7 @@ const productSchema = new Schema(
       required: true,
     },
     images: {
-      type: String,
+      type: [String],
       required: true,
     },
     verified: {
@@ -41,4 +41,4 @@ const productSchema = new Schema(
   { timestamps: true }
 );
 
-export const product = mongoose.mondel("Product", productSchema);
+export const Product = mongoose.model("Product", productSchema);

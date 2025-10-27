@@ -53,7 +53,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     username,
-    role: "buyer", // by default role is buyer
+    role, // by default role is buyer
   });
 
   // remove password and refresh token field from response

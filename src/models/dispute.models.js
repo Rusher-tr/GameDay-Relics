@@ -43,4 +43,4 @@ const disputeSchema = new Schema(
   { timestamps: true }
 );
 
-export const dispute = mongoose.mondel("Dispute", disputeSchema);
+export const Dispute = mongoose.model("Dispute", disputeSchema);

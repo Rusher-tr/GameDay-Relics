@@ -24,4 +24,4 @@ const auditlogSchema = new Schema(
   { timestamps: true }
 );
 
-export const auditlog = mongoose.mondel("Auditlog", auditlogSchema);
+export const Auditlog = mongoose.model("Auditlog", auditlogSchema);
