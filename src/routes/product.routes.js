@@ -20,6 +20,7 @@ router.route("/search").get(getProductById); // Search by name functionality
 
 
 // Seller & Admin only routes
+
 router.route("/create").post(
     verifyJWT,
     authorizeRoles("seller", "admin"),
@@ -27,17 +28,20 @@ router.route("/create").post(
     createProduct
 );
 
+// TESTED SUCCESS
 router.route("/update/:id").patch(
     verifyJWT,
     authorizeRoles("seller", "admin"),
     updateProduct
 );
 
+// TESTED SUCCESS
 router.route("/delete/:id").delete(
     verifyJWT,
     authorizeRoles("seller", "admin"),
     deleteProduct
 );
+
 
 // Admin only routes
 router.route("/verify/:id").post(

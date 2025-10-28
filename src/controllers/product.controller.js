@@ -15,6 +15,8 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 //     );
 //  });
 
+
+// working 
 const getAllProducts = asyncHandler(async (req, res) => {
   // get page number from query (default = 1)
   const page = parseInt(req.query.page) || 1;
@@ -46,6 +48,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   );
 });
 
+// working
 const getProductById = asyncHandler(async (req, res) => { 
   const { query } = req.query;
 
@@ -137,6 +140,7 @@ const createProduct = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, "Product Created Successfully", newProduct));
 });
 
+// Working 
 const updateProduct = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
   const productId = req.params.id;
@@ -178,9 +182,10 @@ const updateProduct = asyncHandler(async (req, res) => {
   )
   return res.
     status(200)
-    .json(new ApiResponse(200, "Product updated successfully", product))
+    .json(new ApiResponse(200, "Product updated successfully", updatedProduct))
 });
 
+// Working
 const deleteProduct = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
   const productId = req.params.id;
@@ -197,6 +202,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Product deleted successfully", null))
 
 });
+
 
 const verifiyProduct = asyncHandler(async (req, res) => {
   const productId = req.params.id;

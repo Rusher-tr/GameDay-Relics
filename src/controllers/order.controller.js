@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError } from "../utils/Apierror.js";
 import { Product } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import mongoose  from "mongoose";
+import mongoose from "mongoose";
 import Product from "../models/product.models.js"
 import Order, { Order } from "../models/order.models.js"
 import Auditlog from "../models/auditlog.models.js"
@@ -14,9 +14,34 @@ const createOrder = asyncHandler(async (req, res) => {
     const sellerId = req.body.sellerId;
     const productId = req.body.productId;
 
+
     if (!(buyerId && sellerId && productId)) {
         throw new APIError(400, "Something Went Wrong, Try Refresing Page");
     }
+
+    const buyerIdchk = await User.findById(buyerId).select("_id");
+    if (!buyerIdchk) {
+        throw new APIError(404, "Buyer Not Found or Not Registered");
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+        throw new APIError(400, "Invalid productId");
+    }
+
+    const product = await Product.findById(productId).select("price sellerId condition");
+    if (!product) {
+        throw new APIError(404, "Product Not Found");
+    }
+    
+    const Selleridchk = product.sellerId?.toString();
+    if (!Selleridchk){
+        throw new APIError(404, "Seller Not Found for this Product");
+    }
+
+    if (sellerId !== Selleridchk) {
+        throw new APIError(400, "SellerId does not match with product's sellerId");
+    }
+
 
     const Order = await Order.create({
         buyerId,
@@ -32,7 +57,6 @@ const createOrder = asyncHandler(async (req, res) => {
         throw new APIError(500, "Something Went Wrong in Order Creation");
     }
     return res.status(201).json(new ApiResponse(201, "Order Created Successfully", Order));
-
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
@@ -75,17 +99,19 @@ const updateOrder = asyncHandler(async (req, res) => {
     }
 
     const Order = await Order.findOneAndUpdate(
-        {   _id: OrderId, 
+        {
+            _id: OrderId,
             buyerId: buyerId,
-            status: "pending" },
-            req.body,
+            status: "pending"
+        },
+        req.body,
         { new: true }
     );
 
-    if (!Order){
+    if (!Order) {
         throw new APIError(404, "Order Not Found or Can't be updated");
     }
-    return res.status(200).json(new ApiResponse(200, "Order Updated Successfully", Order)); 
+    return res.status(200).json(new ApiResponse(200, "Order Updated Successfully", Order));
 });
 
 const raiseDispute = asyncHandler(async (req, res) => { });
@@ -102,24 +128,24 @@ const getOrdersByUser = asyncHandler(async (req, res) => {
 
     const orders = await Order.find({ buyerId: buyerId });
     return res.status(200).json(new ApiResponse(200, "Orders Fetched Successfully", orders));
- });
+});
 
 const getOrdersBySeller = asyncHandler(async (req, res) => {
     const SellerId = req.user._id
 
-    if(!SellerId){
-        throw new APIError(400,"Authentication Error",null)
+    if (!SellerId) {
+        throw new APIError(400, "Authentication Error", null)
     }
 
     const orders = await Order.findbyId({
         SellerId,
     })
-    
-    if(!orders){
-        throw new APIError(404,"No Orders Found for this Seller",null)
+
+    if (!orders) {
+        throw new APIError(404, "No Orders Found for this Seller", null)
     }
-    req.status(200).json(new ApiResponse(200,"Orders Fetched Successfully",orders))
- });
+    req.status(200).json(new ApiResponse(200, "Orders Fetched Successfully", orders))
+});
 
 // UNFINISHED
 const HoldinEscrow = asyncHandler(async (req, res) => { });
@@ -133,18 +159,18 @@ const LogOrderAction = asyncHandler(async (req, res) => {
     const OrderId = req.params._id;
     const UserId = req.user._id;
 
-    if(!(OrderId || UserId)){
-        throw new APIError(400,"Authentication Error")
+    if (!(OrderId || UserId)) {
+        throw new APIError(400, "Authentication Error")
     }
     const Action = "Order Placed"
     const Auditlog = await Auditlog.Create({
         OrderId,
         UserId,
         Action,
-        Amount : mongoose.Types.ObjectId(OrderId)
+        Amount: mongoose.Types.ObjectId(OrderId)
     })
-    return res.status(201).json(new ApiResponse(201,"Order Action Logged Successfully",{}))
- });
+    return res.status(201).json(new ApiResponse(201, "Order Action Logged Successfully", {}))
+});
 
 export {
     createOrder,

@@ -13,7 +13,6 @@ const authorizeRoles = (...allowedRoles) => {
                 `Role: ${req.user.role} is not allowed to access this resource`
             );
         }
-
         next();
     });
 };
