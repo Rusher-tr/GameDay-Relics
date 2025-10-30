@@ -11,18 +11,33 @@ const forceCancelOrder = asyncHandler(async (req, res) => {
     const AdminId = req.params._id
     const orderId = req.body.orderId;
 
+
     if (!(AdminId && orderId)) {
         throw new APIError(400, "Authentication Error, Try Refresing Page");
     }
+    const admincheck = await User.findById(AdminId);
+    if (!admincheck || admincheck.role !== "admin") {
+        throw new APIError(403, "Unauthorized: Admin access required");
+    }
 
-    const order = await Order.findOneAndUpdate({ _id: orderId, status: { $in: ["pending", "shipped"] } }, { status: "cancelled" }, { new: true });
+    const order = await Order.findOneAndUpdate({ 
+        _id: orderId, 
+        status: { $in: ["pending", "shipped"] }
+        }, 
+        { status: "cancelled" }, 
+        { new: true });
 
     if (!order){
         throw new APIError()
     }
 });
 
-const getAllUsers = asyncHandler(async (req, res) => {});
+const getAllUsers = asyncHandler(async (req, res) => {
+    const adminid = req.user._id;
+    if (!adminid) {
+        throw new APIError(400, "Authentication Error, Try Refresing Page");
+    }
+});
 
 const getOrderAmountStats = asyncHandler(async (req, res) => {});
 
