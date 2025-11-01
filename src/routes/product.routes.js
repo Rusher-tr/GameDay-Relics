@@ -14,8 +14,11 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 const router = Router();
 
 // Public routes - Available to all users
+
 //TESTED SUCCESS
 router.route("/").get(getAllProducts);
+
+//______________
 router.route("/search").get(getProductById); // Search by name functionality
 
 
