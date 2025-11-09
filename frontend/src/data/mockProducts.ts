@@ -1,0 +1,145 @@
+import { Product } from '../types';
+
+export const mockProducts: Product[] = [
+  {
+    id: '1',
+    title: '1984 Michael Jordan Rookie Jersey',
+    description: 'Authentic Chicago Bulls rookie season jersey. Worn during historic playoff debut. Complete with certificate of authenticity from PSA.',
+    price: 45000,
+    sellerId: 'seller1',
+    condition: 'Mint',
+    images: [
+      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg',
+      'https://images.pexels.com/photos/3886244/pexels-photo-3886244.jpeg'
+    ],
+    verified: true,
+    team: 'Chicago Bulls',
+    player: 'Michael Jordan',
+    year: '1984',
+    category: 'Jersey',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    title: 'Babe Ruth Signed Baseball',
+    description: 'Official American League baseball signed by The Bambino himself. Authenticated signature from 1932 season. Museum quality piece.',
+    price: 125000,
+    sellerId: 'seller2',
+    condition: 'Good',
+    images: [
+      'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
+      'https://images.pexels.com/photos/1308713/pexels-photo-1308713.jpeg'
+    ],
+    verified: true,
+    team: 'New York Yankees',
+    player: 'Babe Ruth',
+    year: '1932',
+    category: 'Signed Ball',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    title: '1980 Magic Johnson Lakers Jersey',
+    description: 'Championship season jersey from Lakers legendary point guard. Game-worn during 1980 NBA Finals. JSA authenticated.',
+    price: 35000,
+    sellerId: 'seller3',
+    condition: 'Good',
+    images: [
+      'https://images.pexels.com/photos/358042/pexels-photo-358042.jpeg',
+      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg'
+    ],
+    verified: true,
+    team: 'Los Angeles Lakers',
+    player: 'Magic Johnson',
+    year: '1980',
+    category: 'Jersey',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    title: 'Muhammad Ali Fight Gloves 1974',
+    description: 'Original fight gloves from the legendary "Rumble in the Jungle". Worn during the historic match against George Foreman in Zaire.',
+    price: 250000,
+    sellerId: 'seller1',
+    condition: 'Fair',
+    images: [
+      'https://images.pexels.com/photos/4761352/pexels-photo-4761352.jpeg',
+      'https://images.pexels.com/photos/4754146/pexels-photo-4754146.jpeg'
+    ],
+    verified: true,
+    player: 'Muhammad Ali',
+    year: '1974',
+    category: 'Boxing',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '5',
+    title: '1958 Pelé World Cup Jersey',
+    description: 'Match-worn jersey from Brazil\'s World Cup victory. Pelé\'s breakthrough tournament at age 17. Extremely rare piece.',
+    price: 180000,
+    sellerId: 'seller2',
+    condition: 'Good',
+    images: [
+      'https://images.pexels.com/photos/274422/pexels-photo-274422.jpeg',
+      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg'
+    ],
+    verified: true,
+    team: 'Brazil National Team',
+    player: 'Pelé',
+    year: '1958',
+    category: 'Jersey',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '6',
+    title: '1979 Wayne Gretzky Rookie Card',
+    description: 'O-Pee-Chee rookie card in pristine condition. Graded PSA 10 Gem Mint. The Great One\'s most valuable trading card.',
+    price: 95000,
+    sellerId: 'seller3',
+    condition: 'Mint',
+    images: [
+      'https://images.pexels.com/photos/8224837/pexels-photo-8224837.jpeg',
+      'https://images.pexels.com/photos/8224784/pexels-photo-8224784.jpeg'
+    ],
+    verified: true,
+    player: 'Wayne Gretzky',
+    year: '1979',
+    category: 'Trading Card',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '7',
+    title: '1992 Dream Team Poster Signed',
+    description: 'Official Barcelona Olympics poster signed by all 12 Dream Team members. Includes Jordan, Magic, Bird, and more.',
+    price: 15000,
+    sellerId: 'seller1',
+    condition: 'Mint',
+    images: [
+      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg',
+      'https://images.pexels.com/photos/3886244/pexels-photo-3886244.jpeg'
+    ],
+    verified: true,
+    team: 'USA Basketball',
+    year: '1992',
+    category: 'Poster',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '8',
+    title: '1986 Diego Maradona Jersey',
+    description: 'Match-worn jersey from the infamous "Hand of God" game. World Cup quarter-final against England. Historic piece.',
+    price: 275000,
+    sellerId: 'seller2',
+    condition: 'Good',
+    images: [
+      'https://images.pexels.com/photos/274422/pexels-photo-274422.jpeg',
+      'https://images.pexels.com/photos/3886244/pexels-photo-3886244.jpeg'
+    ],
+    verified: true,
+    team: 'Argentina National Team',
+    player: 'Diego Maradona',
+    year: '1986',
+    category: 'Jersey',
+    createdAt: new Date().toISOString(),
+  },
+];
