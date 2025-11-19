@@ -1,14 +1,15 @@
-import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Trash2, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 
 interface CartProps {
   isOpen: boolean;
   onClose: () => void;
-  onCheckout: () => void;
 }
 
-export default function Cart({ isOpen, onClose, onCheckout }: CartProps) {
-  const { items, updateQuantity, removeFromCart, getTotal } = useCart();
+export default function Cart({ isOpen, onClose }: CartProps) {
+  const navigate = useNavigate();
+  const { items, removeFromCart, getTotal } = useCart();
 
   if (!isOpen) return null;
 
@@ -64,22 +65,8 @@ export default function Cart({ isOpen, onClose, onCheckout }: CartProps) {
                         ${item.price.toLocaleString()}
                       </p>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 bg-white rounded-lg border border-slate-300 p-1">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="p-1 hover:bg-slate-100 rounded transition-colors"
-                          >
-                            <Minus className="h-4 w-4 text-slate-700" />
-                          </button>
-                          <span className="w-8 text-center font-semibold text-slate-900">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="p-1 hover:bg-slate-100 rounded transition-colors"
-                          >
-                            <Plus className="h-4 w-4 text-slate-700" />
-                          </button>
+                        <div className="text-sm text-slate-600 font-medium">
+                          Qty: <span className="text-slate-900 font-bold">{item.quantity}</span>
                         </div>
                         <button
                           onClick={() => removeFromCart(item.id)}
@@ -101,7 +88,10 @@ export default function Cart({ isOpen, onClose, onCheckout }: CartProps) {
                   </span>
                 </div>
                 <button
-                  onClick={onCheckout}
+                  onClick={() => {
+                    onClose();
+                    navigate('/checkout');
+                  }}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   Proceed to Checkout

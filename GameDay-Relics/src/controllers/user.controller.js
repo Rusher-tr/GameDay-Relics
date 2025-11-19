@@ -97,17 +97,14 @@ const generateAccessandRefreshTokens = async (userId) => {
 };
 
 const loginUser = asyncHandler(async (req, res) => {
-  // req body -> data
-
+ 
   const { email, username, password } = req.body;
 
-  // validate username, email
 
   if (!(username || email)) {
     throw new APIError(400, "Username or email is required");
   }
 
-  // find if user exist or not
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
@@ -117,7 +114,6 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new APIError(404, "User doesn't exist, Register yourself first");
   }
   
-  // if user exists check pass
 
   const isPasswordvalid = await user.isPasswordcorrect(password);
 
@@ -125,13 +121,10 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new APIError(401, "Incorrect Password");
   }
 
-  // if password is correct generate access and refresh token
 
   const { accessToken, refreshToken } = await generateAccessandRefreshTokens(
     user._id
   );
-  // send cookies
-
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
@@ -139,7 +132,8 @@ const loginUser = asyncHandler(async (req, res) => {
     // to make it only server configureable
     // cuz by default anyone can modify it from frontend
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax", 
   };
 
   return res
@@ -160,11 +154,10 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  //find user
-
+  
   await User.findByIdAndUpdate(
-    // fixed logout logic
-    req.user._id, // assumes you added user id in auth middleware
+
+    req.user._id, 
     {
       $set: { refreshToken: null },
     },
@@ -187,7 +180,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     // to make it only server configureable
     // cuz by default anyone can modify it from frontend
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
   };
   return res
     .status(200)
@@ -225,19 +219,20 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       // to make it only server configureable
       // cuz by default anyone can modify it from frontend
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax", // Important for crosssite cookie handling
     };
-    const { accessToken, newrefreshToken } =
+    const { accessToken, refreshToken } =
       await generateAccessandRefreshTokens(user._id);
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newrefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { refreshToken: newrefreshToken },
+          { accessToken, refreshToken },
           "Access token Refreshed"
         )
       );
@@ -268,7 +263,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      200,
       new ApiResponse(200, req.user, "Current User Fetched Successfully")
     );
 });
@@ -284,7 +278,6 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     req.user?._id,
     {
       $set: {
-        // can be as fullName only and it will also save it as
         username: username,
         email: email,
       },
@@ -296,6 +289,81 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User Information Updated Successfully"));
 });
 
+// Update seller payment settings
+const updatePaymentSettings = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { paymentGateway, accountNumber, accountName, stripeAccountId } = req.body;
+
+  if (!userId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const user = await User.findById(userId);
+  if (!user || user.role !== "seller") {
+    throw new APIError(403, "Only sellers can update payment settings");
+  }
+
+  // Validate payment gateway
+  const validGateways = ["nayapay", "easypaisa", "jazzcash", "stripe"];
+  if (paymentGateway && !validGateways.includes(paymentGateway)) {
+    throw new APIError(400, "Invalid payment gateway. Must be one of: nayapay, easypaisa, jazzcash, stripe");
+  }
+
+  if (paymentGateway) {
+    if (paymentGateway === "stripe") {
+      if (!stripeAccountId || !stripeAccountId.trim()) {
+        throw new APIError(400, "Stripe Account ID is required for Stripe gateway");
+      }
+    } else {
+      if (!accountNumber || !accountNumber.trim()) {
+        throw new APIError(400, "Account number is required for mobile wallet gateways");
+      }
+      if (!accountName || !accountName.trim()) {
+        throw new APIError(400, "Account name is required for mobile wallet gateways");
+      }
+    }
+  }
+
+  user.paymentGateway = paymentGateway;
+  user.paymentDetails = {
+    accountNumber: accountNumber || user.paymentDetails?.accountNumber,
+    accountName: accountName || user.paymentDetails?.accountName,
+    stripeAccountId: stripeAccountId || user.paymentDetails?.stripeAccountId,
+  };
+
+  await user.save({ validateBeforeSave: false });
+
+  const updatedUser = await User.findById(userId).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Payment settings updated successfully"));
+});
+
+const getPaymentSettings = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!userId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const user = await User.findById(userId).select("paymentGateway paymentDetails");
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
+
+  if (user.role !== "seller") {
+    throw new APIError(403, "Only sellers can view payment settings");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {
+      paymentGateway: user.paymentGateway,
+      paymentDetails: user.paymentDetails
+    }, "Payment settings fetched successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -304,5 +372,7 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
+  updatePaymentSettings,
+  getPaymentSettings,
   generateAccessandRefreshTokens,
 };

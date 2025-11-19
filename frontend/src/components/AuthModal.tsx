@@ -1,5 +1,6 @@
-import { X } from 'lucide-react';
-import { useState } from 'react';
+import { X, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AuthModalProps {
@@ -7,15 +8,29 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+type UserRole = 'buyer' | 'seller' | 'admin';
+
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+  const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState<UserRole>('buyer');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { signIn, signUp, signOut, user } = useAuth();
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -26,7 +41,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       if (isSignUp) {
-        await signUp(email, password, name);
+        await signUp(email, password, name, role);
       } else {
         await signIn(email, password);
       }
@@ -48,20 +63,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ overflow: 'hidden' }}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <X className="h-6 w-6 text-slate-700" />
-          </button>
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X className="h-6 w-6 text-slate-700" />
+        </button>
 
-          <div className="p-8">
-            {user ? (
+        <div className="p-6 sm:p-8">
+              {user ? (
               <div className="text-center">
                 <h2 className="text-3xl font-black text-slate-900 mb-4">Welcome Back!</h2>
                 <p className="text-slate-600 mb-2">Signed in as:</p>
@@ -75,10 +89,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             ) : (
               <>
-                <h2 className="text-3xl font-black text-slate-900 mb-2 text-center">
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 text-center">
                   {isSignUp ? 'Create Account' : 'Welcome Back'}
                 </h2>
-                <p className="text-slate-600 text-center mb-8">
+                <p className="text-slate-600 text-center mb-6 text-sm">
                   {isSignUp ? 'Join GameDay Relics today' : 'Sign in to your account'}
                 </p>
 
@@ -88,7 +102,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3">
                   {isSignUp && (
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -101,6 +115,41 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                         required
                       />
+                    </div>
+                  )}
+
+                  {isSignUp && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        I want to sign up as:
+                      </label>
+                      <div className="space-y-1.5">
+                        <label className="flex items-center p-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors" style={{ borderColor: role === 'buyer' ? '#b45309' : undefined, backgroundColor: role === 'buyer' ? '#fef3c7' : undefined }}>
+                          <input
+                            type="radio"
+                            name="role"
+                            value="buyer"
+                            checked={role === 'buyer'}
+                            onChange={(e) => setRole(e.target.value as UserRole)}
+                            className="w-4 h-4 text-amber-600"
+                          />
+                          <span className="ml-2 font-medium text-slate-700 text-sm">Buyer</span>
+                          <span className="ml-1 text-xs text-slate-500">Purchase items</span>
+                        </label>
+
+                        <label className="flex items-center p-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors" style={{ borderColor: role === 'seller' ? '#b45309' : undefined, backgroundColor: role === 'seller' ? '#fef3c7' : undefined }}>
+                          <input
+                            type="radio"
+                            name="role"
+                            value="seller"
+                            checked={role === 'seller'}
+                            onChange={(e) => setRole(e.target.value as UserRole)}
+                            className="w-4 h-4 text-amber-600"
+                          />
+                          <span className="ml-2 font-medium text-slate-700 text-sm">Seller</span>
+                          <span className="ml-1 text-xs text-slate-500">List & sell items</span>
+                        </label>
+                      </div>
                     </div>
                   )}
 
@@ -139,17 +188,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-4 text-center space-y-3">
                   <button
-                    onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-amber-700 hover:text-amber-800 font-semibold"
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setRole('buyer');
+                      setError('');
+                    }}
+                    className="text-amber-700 hover:text-amber-800 font-semibold block w-full"
                   >
                     {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                   </button>
+
+                  {!isSignUp && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate('/admin-login');
+                      }}
+                      className="text-slate-600 hover:text-slate-800 font-medium text-sm flex items-center justify-center gap-2 w-full"
+                    >
+                      <Shield className="h-4 w-4" />
+                      <span>Are you an admin? Login here</span>
+                    </button>
+                  )}
                 </div>
               </>
             )}
-          </div>
         </div>
       </div>
     </div>

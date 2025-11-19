@@ -23,14 +23,25 @@ const userSchema = new Schema(
       required: true,
     },
     transactionId: {
-      type: String, // or Schema.Types.ObjectId if you want to store a reference later
+      type: String, 
     },
 
     role: {
-      enum: ["admin", "buyer", "seller"],
       type: String,
+      enum: ["admin", "buyer", "seller"],
+      required: true,
+      default: "buyer",
     },
-    refreshTokens: {
+    paymentGateway: {
+      type: String,
+      enum: ["nayapay", "easypaisa", "jazzcash", "stripe"],
+    },
+    paymentDetails: {
+      accountNumber: String, 
+      accountName: String,
+      stripeAccountId: String, 
+    },
+    refreshToken: {
       type: String,
     },
   },
@@ -38,7 +49,7 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next(); // if password is not modified then go to next middleware
+  if (!this.isModified("password")) return next(); 
 
   this.password = await bcrypt.hash(this.password, 10);
   next();

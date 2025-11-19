@@ -4,7 +4,7 @@
 // // import { User } from '../models/user.models.js';
 
 // // // ─────────────────────────────────────────────
-// // // 1️⃣ Internal function — used by TOP service
+// // // Internal function — used by TOP service
 // // // ─────────────────────────────────────────────
 
 // // export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
@@ -117,19 +117,25 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
   const item = order.productId;
   if (!item) throw new APIError(400, "No product linked to order");
 
-  // ✅ Create Stripe Checkout Session
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
+  // Ensure minimum Stripe amount (50 cents USD)
+  const priceInCents = Math.round(item.price * 100);
+  const minimumAmount = 50; // 50 cents minimum for USD
+  const finalAmount = Math.max(priceInCents, minimumAmount);
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
     line_items: [
       {
         price_data: {
-          currency: "pkr",
+          currency: "usd", // Changed from "pkr" to "usd" to avoid conversion issues
           product_data: {
             name: item.title || "Item",
             description: item.description || "",
           },
-          unit_amount: Math.round(item.price * 100),
+          unit_amount: finalAmount,
         },
         quantity: 1,
       },
@@ -138,11 +144,9 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
       orderId: order._id.toString(),
       buyerId: buyer._id.toString(),
     },
-    success_url: `${process.env.LOCAL_URL}/api/v1/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.LOCAL_URL}/api/v1/payment/cancel`,
+    success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${frontendUrl}/checkout`,
   });
-
-  // ✅ Save Stripe session ID into Order as transactionId
   order.transactionId = session.id;
   await order.save();
 

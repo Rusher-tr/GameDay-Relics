@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { 
+import {
     getAllProducts,
-    getProductById,
+    searchProducts,
+    getSingleProduct,
     createProduct,
     updateProduct,
     deleteProduct,
@@ -19,11 +20,11 @@ const router = Router();
 //TESTED SUCCESS
 router.route("/").get(getAllProducts);
 
-//______________
-router.route("/search").get(getProductById); // Search by name functionality
+// Search products by query
+router.route("/search").get(searchProducts);
 
-
-
+// Get single product by ID
+router.route("/:id").get(getSingleProduct);
 
 // Seller & Admin only routes
 

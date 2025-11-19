@@ -100,6 +100,9 @@ const createOrder = asyncHandler(async (req, res) => {
   const product = await Product.findById(productId).select("price sellerId title description");
   if (!product) throw new APIError(404, "Product not found");
 
+  const sellerId = product.sellerId;
+  const amount = product.price;
+
   const createdOrder = await Order.create({
     buyerId,
     sellerId,
@@ -107,9 +110,9 @@ const createOrder = asyncHandler(async (req, res) => {
     status: "pending",
     amount,
     escrowRelease: false,
-    shippingProvider,
-    trackingId,
-    transactionId: null, 
+    shippingProvider: null,
+    trackingNumber: null,
+    transactionId: null,
   });
 
   // Create Stripe Checkout session
@@ -117,7 +120,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    order,
+    order: createdOrder,
     checkoutUrl: session.url,
   });
 });
@@ -248,10 +251,10 @@ const getOrdersByUser = asyncHandler(async (req, res) => {
     throw new APIError(400, "Something Went Wrong, Try Refresing Page");
   }
 
-  const orders = await Order.find({ buyerId: buyerId });
+  const orders = await Order.find({ buyerId: buyerId }).populate("productId").populate("sellerId", "username email");
   return res
     .status(200)
-    .json(new ApiResponse(200, "Orders Fetched Successfully", orders));
+    .json(new ApiResponse(200, orders, "Orders Fetched Successfully"));
 });
 
 // Working
@@ -262,17 +265,17 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
     throw new APIError(400, "Authentication Error", null);
   }
 
-  const orders = await Order.findOne({
+  const orders = await Order.find({
     sellerId,
-  });
+  }).populate("productId").populate("buyerId", "username email");
 
-  if (!orders) {
+  if (!orders || orders.length === 0) {
     throw new APIError(404, "No Orders Found for this Seller", null);
   }
 
   res
     .status(200)
-    .json(new ApiResponse(200, "Orders Fetched Successfully", orders));
+    .json(new ApiResponse(200, orders, "Orders Fetched Successfully"));
 });
 
 // working 
@@ -332,6 +335,12 @@ const raiseDispute = asyncHandler(async (req, res) => {
   if (!disputecreation) {
     throw new APIError(400, "Dispute Creation Failed")
   }
+
+  // Update order status and buyer satisfaction
+  order.status = "Disputed";
+  order.buyerSatisfaction = "disputed";
+  await order.save();
+
   const auditl = await Auditlog.create({
     sellerId: order.sellerId,
     userId: buyerId,
@@ -342,6 +351,50 @@ const raiseDispute = asyncHandler(async (req, res) => {
     throw new APIError(400, "Audit Creation Failed for Raising Dispute ")
   }
   return res.status(200).json(new ApiResponse(200, "Dispute Raised Successfully"), null);
+});
+
+// Mark buyer satisfaction
+const markBuyerSatisfaction = asyncHandler(async (req, res) => {
+  const buyerId = req.user._id;
+  const orderId = req.params.id;
+  const { satisfaction } = req.body; // "satisfied" or "fine"
+
+  if (!buyerId || !orderId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  if (!satisfaction || !["satisfied", "fine"].includes(satisfaction)) {
+    throw new APIError(400, "Invalid satisfaction value. Must be 'satisfied' or 'fine'");
+  }
+
+  const order = await Order.findOne({ _id: orderId, buyerId });
+  if (!order) {
+    throw new APIError(404, "Order not found or you don't have permission");
+  }
+
+  // Only allow marking satisfaction for shipped/completed orders
+  if (!["shipped", "Held", "Escrow"].includes(order.status)) {
+    throw new APIError(400, "Can only mark satisfaction for delivered orders");
+  }
+
+  if (order.buyerSatisfaction !== "pending") {
+    throw new APIError(400, "Satisfaction already marked for this order");
+  }
+
+  order.buyerSatisfaction = satisfaction;
+  await order.save();
+
+  // Create audit log
+  await Auditlog.create({
+    userId: buyerId,
+    sellerId: order.sellerId,
+    action: `Buyer marked order as ${satisfaction}`,
+    amount: order.amount,
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, order, `Order marked as ${satisfaction} successfully`)
+  );
 });
 
 // UNFINISHED
@@ -379,6 +432,7 @@ export {
   raiseDispute,
   getOrdersByUser,
   getOrdersBySeller,
+  markBuyerSatisfaction,
   HoldinEscrow,
   releaseEscrow,
   refundOrder,

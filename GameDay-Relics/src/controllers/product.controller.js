@@ -36,7 +36,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   const totalPages = Math.ceil(totalProducts / limit);
 
   return res.status(200).json(
-    new ApiResponse(200, "Products fetched successfully", {
+    new ApiResponse(200, {
       products,
       pagination: {
         totalProducts,
@@ -44,38 +44,57 @@ const getAllProducts = asyncHandler(async (req, res) => {
         currentPage: page,
         perPage: limit,
       },
-    })
+    }, "Products fetched successfully")
   );
 });
 
-// working
-const getProductById = asyncHandler(async (req, res) => { 
+// working - search products by query
+const searchProducts = asyncHandler(async (req, res) => {
   const { query } = req.query;
 
   if (!query) {
     throw new APIError(400, "Please provide a search query")
   }
-  
+
   // Advanced search: search by title or description (case-insensitive)
   const products = await Product.find({
     $or: [
-      { title: { $regex: query, $options: "i" } }, // Case-insensitive title search
-      { description: { $regex: query, $options: "i" } } // Also search in description
+      { title: { $regex: query, $options: "i" } }, 
+      { description: { $regex: query, $options: "i" } } 
     ]
   });
 
   if (!products || products.length === 0) {
     throw new APIError(404, "No products found matching your search");
-  } 
+  }
 
   return res.status(200).json(
     new ApiResponse(
       200,
-      "Products fetched successfully", 
-      products
+      products,
+      "Products fetched successfully"
     )
   );
 
+});
+
+// Get single product by ID
+const getSingleProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new APIError(400, "Product ID is required");
+  }
+
+  const product = await Product.findById(id).populate("sellerId", "username email");
+
+  if (!product) {
+    throw new APIError(404, "Product not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, product, "Product fetched successfully")
+  );
 });
 
 //  working on image upload part || no payment gateway part yet
@@ -107,6 +126,17 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Maximum 12 images are allowed");
   }
 
+  // Debug: Log file information
+  console.log("📁 Received files:", req.files.length);
+  req.files.forEach((file, index) => {
+    console.log(`File ${index + 1}:`, {
+      originalname: file.originalname,
+      path: file.path,
+      mimetype: file.mimetype,
+      size: file.size
+    });
+  });
+
   // Upload images to cloudinary
   const imageUploadPromises = req.files.map(file => uploadOnCloudinary(file.path));
   const uploadedImages = await Promise.all(imageUploadPromises);
@@ -137,7 +167,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(201, "Product Created Successfully", newProduct));
+    .json(new ApiResponse(201, newProduct, "Product Created Successfully"));
 });
 
 // Working 
@@ -182,7 +212,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   )
   return res.
     status(200)
-    .json(new ApiResponse(200, "Product updated successfully", updatedProduct))
+    .json(new ApiResponse(200, updatedProduct, "Product updated successfully"))
 });
 
 // Working
@@ -211,7 +241,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
   return res.
     status(200)
-    .json(new ApiResponse(200, "Product deleted successfully", null))
+    .json(new ApiResponse(200, null, "Product deleted successfully"))
 
 });
 
@@ -248,13 +278,14 @@ const verifiyProduct = asyncHandler(async (req, res) => {
   if (!verification) { 
     throw new APIError(500, "Something went wrong in verification creation");
   }
-  return res.status(200).json(new ApiResponse(200,"Product Verified In Queue, You will be notified about the results through mail",verification))
+  return res.status(200).json(new ApiResponse(200, verification, "Product Verified In Queue, You will be notified about the results through mail"))
 
 });
 
 export {
   getAllProducts,
-  getProductById,
+  searchProducts,
+  getSingleProduct,
   createProduct,
   updateProduct,
   deleteProduct,

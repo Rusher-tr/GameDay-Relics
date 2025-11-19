@@ -47,10 +47,10 @@ router.get(
     let order = null;
 
     if (orderId) {
-      order = await Order.findById(orderId);
+      order = await Order.findById(orderId).populate("productId").populate("sellerId", "username email");
     } else {
       // fallback: find order whose transactionId equals sessionId
-      order = await Order.findOne({ transactionId: sessionId });
+      order = await Order.findOne({ transactionId: sessionId }).populate("productId").populate("sellerId", "username email");
     }
 
     if (!order) {
@@ -74,7 +74,6 @@ router.get(
       success: true,
       message: "Payment verified",
       order,
-      session,
     });
   })
 );

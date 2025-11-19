@@ -15,7 +15,7 @@ const orderSchema = new Schema(
       ref: "User",
     },
     transactionId: {
-        type: String, // or Schema.Types.ObjectId if you want to store a reference later
+        type: String, 
       },
     status: {
       type: String,
@@ -36,6 +36,12 @@ const orderSchema = new Schema(
     },
     escrowRelease: {
       type: Boolean,
+      default: false,
+    },
+    buyerSatisfaction: {
+      type: String,
+      enum: ["pending", "satisfied", "fine", "disputed"],
+      default: "pending",
     },
     shippingProvider: {
       type: String,

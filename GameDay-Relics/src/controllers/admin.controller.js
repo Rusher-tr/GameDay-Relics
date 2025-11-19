@@ -59,10 +59,10 @@ const getAllUsers = asyncHandler(async (req, res) => {
   if (!admincheck || admincheck.role !== "admin") {
     throw new APIError(403, "Unauthorized: Admin access required");
   }
-  const users = await User.find().select("-password");
+  const users = await User.find({ role: { $exists: true, $ne: null } }).select("-password");
   return res
     .status(200)
-    .json(new ApiResponse(200, "Users Fetched Successfully", users));
+    .json(new ApiResponse(200, users, "Users Fetched Successfully"));
 });
 
 // Working
@@ -93,8 +93,8 @@ const getOrderAmountStats = asyncHandler(async (req, res) => {
 
   const auditlog = await Auditlog.create({
     action: "Amount Stats Retrieved",
-    amount: stats,
-    userId: adminId,
+    amount: stats[0]?.totalAmount || 0,
+    userId: adminid,
   });
 
   if (!auditlog) {
@@ -104,7 +104,7 @@ const getOrderAmountStats = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, "Order Amount Stats Fetched Successfully", stats[0])
+      new ApiResponse(200, stats[0] || null, "Order Amount Stats Fetched Successfully")
     );
 });
 
@@ -118,10 +118,13 @@ const getAllOrders = asyncHandler(async (req, res) => {
   if (!admincheck || admincheck.role !== "admin") {
     throw new APIError(403, "Unauthorized: Admin access required");
   }
-  const Orders = await Order.find();
+  const Orders = await Order.find()
+    .populate("productId", "title price")
+    .populate("buyerId", "username email")
+    .populate("sellerId", "username email");
   return res
     .status(200)
-    .json(new ApiResponse(200, "All Orders Fetched Successfully", Orders));
+    .json(new ApiResponse(200, Orders, "All Orders Fetched Successfully"));
 });
 
 // Working
@@ -146,7 +149,7 @@ const forcedDeleteUser = asyncHandler(async (req, res) => {
   const deleteduser = await User.findByIdAndDelete(checkUser._id);
 
   if (!deleteduser) {
-    throw new APIError(400, "Can Delete User")
+    throw new APIError(400, "Cannot Delete User");
   }
   const auditlog = await Auditlog.create({
     action: "User Deleted",
@@ -159,7 +162,7 @@ const forcedDeleteUser = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, "User Deleted Successfully", usertoDelete));
+    .json(new ApiResponse(200, deleteduser, "User Deleted Successfully"));
 });
 
 //______________________________________________________________________
@@ -239,6 +242,208 @@ const removeProduct = asyncHandler(async(req,res)=>{
 
 const forceRefund = asyncHandler(async (req, res) => { });
 
+// Get all escrow payments (orders in escrow status)
+const getEscrowPayments = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  // Find all orders that are in escrow status
+  const escrowOrders = await Order.find({
+    status: { $in: ["Escrow", "Held", "shipped"] },
+    escrowRelease: false
+  })
+    .populate("productId", "title")
+    .populate("buyerId", "username email")
+    .populate("sellerId", "username email")
+    .sort({ createdAt: -1 });
+
+  // Transform to match frontend expected format
+  const escrowPayments = escrowOrders.map(order => ({
+    id: order._id.toString(),
+    order_id: order._id.toString(),
+    amount: order.amount,
+    status: 'held',
+    held_at: order.createdAt,
+    buyerSatisfaction: order.buyerSatisfaction || 'pending',
+    order: {
+      id: order._id.toString(),
+      buyer_id: order.buyerId?._id?.toString(),
+      seller_id: order.sellerId?._id?.toString(),
+      product_id: order.productId?._id?.toString(),
+      price: order.amount,
+      status: order.status
+    }
+  }));
+
+  return res.status(200).json(
+    new ApiResponse(200, escrowPayments, "Escrow payments fetched successfully")
+  );
+});
+
+// Release escrow payment
+const releaseEscrowPayment = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const { orderId } = req.body;
+  const escrowId = req.params.escrowId;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  // Use orderId from body or escrowId from params (they should be the same)
+  const orderIdToUse = orderId || escrowId;
+
+  const order = await Order.findById(orderIdToUse);
+  if (!order) {
+    throw new APIError(404, "Order not found");
+  }
+
+  if (order.escrowRelease) {
+    throw new APIError(400, "Escrow already released");
+  }
+
+  // Get seller payment information
+  const seller = await User.findById(order.sellerId).select("paymentGateway paymentDetails username email");
+  if (!seller) {
+    throw new APIError(404, "Seller not found");
+  }
+
+  // Check if seller has configured payment settings
+  if (!seller.paymentGateway) {
+    throw new APIError(400, "Seller has not configured payment settings. Cannot release escrow.");
+  }
+
+  // Release escrow
+  order.escrowRelease = true;
+  order.status = "Completed";
+  await order.save();
+
+  // Create audit log with payment gateway info
+  await Auditlog.create({
+    action: `Escrow Released - Payment to ${seller.paymentGateway}`,
+    amount: order.amount,
+    sellerId: order.sellerId,
+    userId: adminId,
+  });
+
+  // Return order with seller payment details for admin to process payment
+  const responseData = {
+    order,
+    sellerPaymentInfo: {
+      sellerId: seller._id,
+      sellerName: seller.username,
+      sellerEmail: seller.email,
+      paymentGateway: seller.paymentGateway,
+      paymentDetails: seller.paymentDetails,
+      amount: order.amount,
+    }
+  };
+
+  return res.status(200).json(
+    new ApiResponse(200, responseData, "Escrow payment released successfully. Please process payment to seller using the provided payment details.")
+  );
+});
+
+// Get all disputes
+const getAllDisputes = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  // Find all open disputes
+  const disputes = await Dispute.find({ status: "Open" })
+    .populate("orderId")
+    .populate("buyerId", "username email")
+    .sort({ createdAt: -1 });
+
+  // Transform to match frontend expected format
+  const formattedDisputes = disputes.map(dispute => ({
+    id: dispute._id.toString(),
+    order_id: dispute.orderId?._id?.toString(),
+    raised_by: dispute.buyerId?._id?.toString(),
+    reason: dispute.reason,
+    description: dispute.description,
+    status: dispute.status.toLowerCase(),
+    created_at: dispute.createdAt,
+    order: dispute.orderId ? {
+      id: dispute.orderId._id.toString(),
+      status: dispute.orderId.status,
+      amount: dispute.orderId.amount
+    } : null
+  }));
+
+  return res.status(200).json(
+    new ApiResponse(200, formattedDisputes, "Disputes fetched successfully")
+  );
+});
+
+// Resolve dispute
+const resolveDispute = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const disputeId = req.params.disputeId;
+  const { resolution, orderId } = req.body;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  if (!resolution || !resolution.trim()) {
+    throw new APIError(400, "Resolution description is required");
+  }
+
+  const dispute = await Dispute.findById(disputeId);
+  if (!dispute) {
+    throw new APIError(404, "Dispute not found");
+  }
+
+  if (dispute.status !== "Open") {
+    throw new APIError(400, "Dispute is already resolved");
+  }
+
+  // Update dispute status
+  dispute.status = "Resolved";
+  dispute.resolution = resolution;
+  dispute.resolvedAt = new Date();
+  dispute.resolvedBy = adminId;
+  await dispute.save();
+
+  // Create audit log
+  await Auditlog.create({
+    action: "Dispute Resolved",
+    userId: adminId,
+    amount: dispute.orderId?.amount || 0,
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, dispute, "Dispute resolved successfully")
+  );
+});
+
 export {
   forceCancelOrder,
   getAllUsers,
@@ -246,5 +451,9 @@ export {
   getOrderAmountStats,
   forcedDeleteUser,
   solveDispute,
-  removeProduct
+  removeProduct,
+  getEscrowPayments,
+  releaseEscrowPayment,
+  getAllDisputes,
+  resolveDispute
 };

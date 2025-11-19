@@ -1,64 +1,54 @@
-import { Trophy, Mail, Phone, MapPin } from 'lucide-react';
-
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-slate-800 to-amber-900 text-amber-50 pt-16 pb-8">
+    <footer style={{ backgroundColor: '#f2dec4' }} className="pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <Trophy className="h-10 w-10 text-amber-400" strokeWidth={2.5} />
-              <div>
-                <h3 className="text-2xl font-black text-amber-50" style={{ fontFamily: 'Georgia, serif' }}>
-                  GameDay Relics
-                </h3>
-                <p className="text-xs text-amber-300 tracking-widest uppercase">Vintage Sports Memorabilia</p>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+          {/* Left Section - Logo and Description */}
+          <div>
+            <div className="flex items-center space-x-4 mb-6">
+              <img
+                src="/Gameday-green.png"
+                alt="GameDay Relics"
+                className="h-20 w-auto object-contain"
+              />
             </div>
-            <p className="text-amber-200 leading-relaxed mb-6">
-              Your trusted marketplace for authentic vintage sports jerseys and memorabilia.
-              Every item verified, every transaction secured.
+            <p className="font-inter leading-relaxed mb-6" style={{ color: '#1c452a' }}>
+              Your trusted marketplace for authentic vintage sports jerseys and memorabilia. Every item verified, every transaction secured.
             </p>
-            <div className="flex space-x-4">
-              <div className="w-10 h-10 bg-amber-700 hover:bg-amber-600 rounded-full flex items-center justify-center cursor-pointer transition-colors">
-                <Mail className="h-5 w-5" />
-              </div>
-              <div className="w-10 h-10 bg-amber-700 hover:bg-amber-600 rounded-full flex items-center justify-center cursor-pointer transition-colors">
-                <Phone className="h-5 w-5" />
-              </div>
+          </div>
+
+          {/* Right Section - Navigation Links */}
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <h4 className="font-georgia font-bold text-lg mb-4" style={{ color: '#1c452a' }}>Navigation</h4>
+              <ul className="space-y-2 font-inter text-sm" style={{ color: '#1c452a' }}>
+                <li className="hover:opacity-70 cursor-pointer transition-opacity">Home</li>
+                <li className="hover:opacity-70 cursor-pointer transition-opacity">About</li>
+                <li className="hover:opacity-70 cursor-pointer transition-opacity">Shop</li>
+                <li className="hover:opacity-70 cursor-pointer transition-opacity">Services</li>
+              </ul>
             </div>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-lg mb-4 text-amber-300">Shop</h4>
-            <ul className="space-y-2 text-amber-200">
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Jerseys</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Signed Items</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Memorabilia</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">New Arrivals</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-lg mb-4 text-amber-300">Support</h4>
-            <ul className="space-y-2 text-amber-200">
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Help Center</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Authentication</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Shipping Info</li>
-              <li className="hover:text-amber-400 cursor-pointer transition-colors">Returns</li>
-            </ul>
+            <div>
+              <h4 className="font-georgia font-bold text-lg mb-4" style={{ color: '#1c452a' }}>Contact</h4>
+              <ul className="space-y-2 font-inter text-sm" style={{ color: '#1c452a' }}>
+                <li>Phone: +1 (555) 123-4567</li>
+                <li>Email: hello@gamedayrelics.com</li>
+                <li>Address: New York, NY</li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-amber-700 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-amber-300 text-sm">
+        {/* Bottom Section - Copyright and Links */}
+        <div className="border-t" style={{ borderColor: '#1c452a', opacity: 0.3 }}>
+          <div className="pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="font-inter text-sm" style={{ color: '#1c452a' }}>
               © 2025 GameDay Relics. All rights reserved.
             </p>
-            <div className="flex space-x-6 text-sm text-amber-300">
-              <span className="hover:text-amber-400 cursor-pointer transition-colors">Privacy Policy</span>
-              <span className="hover:text-amber-400 cursor-pointer transition-colors">Terms of Service</span>
-              <span className="hover:text-amber-400 cursor-pointer transition-colors">Contact</span>
+            <div className="flex space-x-6 font-inter text-sm" style={{ color: '#1c452a' }}>
+              <span className="hover:opacity-70 cursor-pointer transition-opacity">Privacy Policy</span>
+              <span className="hover:opacity-70 cursor-pointer transition-opacity">Terms of Service</span>
+              <span className="hover:opacity-70 cursor-pointer transition-opacity">Contact</span>
             </div>
           </div>
         </div>

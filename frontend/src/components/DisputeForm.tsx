@@ -45,14 +45,13 @@ export default function DisputeForm({ isOpen, onClose, orderId, onSuccess }: Dis
 
     try {
       const formData = new FormData();
-      formData.append('orderId', orderId);
       formData.append('reason', reason);
       formData.append('description', description);
       images.forEach((image) => {
-        formData.append('images', image);
+        formData.append('evidence', image);
       });
 
-      const { data } = await api.post('/disputes', formData, {
+      const { data } = await api.post(`/orders/${orderId}/raise-dispute`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -63,14 +62,9 @@ export default function DisputeForm({ isOpen, onClose, orderId, onSuccess }: Dis
         onSuccess();
         onClose();
       }, 3000);
-
-      setSubmitted(true);
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit dispute');
+    } catch (err: any) {
+      console.error('Dispute submission error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to submit dispute');
     } finally {
       setLoading(false);
     }

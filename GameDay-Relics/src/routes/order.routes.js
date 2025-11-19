@@ -9,6 +9,7 @@ import {
   raiseDispute,
   getOrdersByUser,
   getOrdersBySeller,
+  markBuyerSatisfaction,
   //holdInEscrow,
   releaseEscrow,
   refundOrder,
@@ -28,7 +29,7 @@ router.route("/:id/raise-dispute").post(verifyJWT,authorizeRoles("buyer"),upload
 // router.post("/", verifyJWT, authorizeRoles("buyer"), createOrder);
 
 
-router.post("/create", createOrder);
+router.post("/create", verifyJWT, authorizeRoles("buyer"), createOrder);
 
 
 // Buyer view own orders
@@ -47,8 +48,11 @@ router.get("/:id", verifyJWT, getOrderById); // controller checks ownership/role
 
 // Cancel (buyer)
 
-// TESTED SUCCESS 
+// TESTED SUCCESS
 router.post("/:id/cancel", verifyJWT, authorizeRoles("buyer"), cancelOrder);
+
+// Mark buyer satisfaction
+router.post("/:id/satisfaction", verifyJWT, authorizeRoles("buyer"), markBuyerSatisfaction);
 
 // Seller actions: hold/release escrow, update shipping
 

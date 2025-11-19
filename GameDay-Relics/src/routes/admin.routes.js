@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
-import { 
+import {
     forceCancelOrder,
-    getAllOrders, 
-    getOrderAmountStats, 
-    getAllUsers, 
+    getAllOrders,
+    getOrderAmountStats,
+    getAllUsers,
     forcedDeleteUser,
     removeProduct,
     solveDispute,
-    
+    getEscrowPayments,
+    releaseEscrowPayment,
+    getAllDisputes,
+    resolveDispute
 } from "../controllers/admin.controller.js";
 
 const router = Router();
@@ -32,5 +35,11 @@ router.get("/users", verifyJWT, authorizeRoles("admin"), getAllUsers);
 
 // TESTED SUCCESS
 router.delete("/users/:id/force-delete", verifyJWT, authorizeRoles("admin"), forcedDeleteUser);
+
+// New admin panel endpoints for frontend
+router.get("/escrow-payments", verifyJWT, authorizeRoles("admin"), getEscrowPayments);
+router.post("/escrow/:escrowId/release", verifyJWT, authorizeRoles("admin"), releaseEscrowPayment);
+router.get("/disputes", verifyJWT, authorizeRoles("admin"), getAllDisputes);
+router.post("/disputes/:disputeId/resolve", verifyJWT, authorizeRoles("admin"), resolveDispute);
 
 export default router;

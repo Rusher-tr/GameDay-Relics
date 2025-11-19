@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { loginUser, logoutUser, registerUser,refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser,refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updatePaymentSettings, getPaymentSettings } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router()
 
@@ -24,11 +25,14 @@ router.route("/refresh-token").post(refreshAccessToken)
 // tested SUCCESS
 router.route("/change-password").post(verifyJWT,changeCurrentPassword)
 
-// DK what its doing BUT TESTED SUCCESS
-router.route("/current-user").get(verifyJWT,getCurrentUser)
+router.route("/current-user").get(verifyJWT, getCurrentUser)
 
 //tested ------ NOT SURE HOW IT WORKS :p
 router.route("/update-account").patch(verifyJWT,updateAccountDetails)
+
+// Seller payment settings routes
+router.route("/payment-settings").get(verifyJWT, authorizeRoles("seller"), getPaymentSettings)
+router.route("/payment-settings").patch(verifyJWT, authorizeRoles("seller"), updatePaymentSettings)
 
 
 export default router

@@ -1,18 +1,15 @@
 export interface Product {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   price: number;
-  seller_id: string;
-  condition: 'Mint' | 'Good' | 'Fair';
+  sellerId: string | { _id: string; username: string; email: string };
+  condition: string;
   images: string[];
   verified: boolean;
-  category?: string;
-  team?: string;
-  player?: string;
-  year?: string;
-  stock: number;
-  created_at: string;
+  verificationId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CartItem extends Product {

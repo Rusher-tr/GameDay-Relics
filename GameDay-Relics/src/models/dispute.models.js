@@ -22,10 +22,21 @@ const disputeSchema = new Schema(
       type: String,
       required: true,
     },
+    description: {
+      type: String,
+      default: "",
+    },
     status: {
       type: String,
       enum: ["Open", "Resolved", "In review", "Refunded"],
       default: "pending",
+    },
+    resolution: {
+      type: String,
+      default: "",
+    },
+    resolvedAt: {
+      type: Date,
     },
     evidence:{
          type: [String]

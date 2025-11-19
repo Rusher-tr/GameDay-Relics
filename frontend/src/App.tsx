@@ -1,55 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ProductGrid from './components/ProductGrid';
+import FeaturedCollections from './components/FeaturedCollections';
+import TrustSection from './components/TrustSection';
 import Cart from './components/Cart';
-import ProductDetail from './components/ProductDetail';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
-import Checkout from './components/Checkout';
-import OrderConfirmation from './components/OrderConfirmation';
 import OrderTracking from './components/OrderTracking';
 import DisputeForm from './components/DisputeForm';
 import VerificationFlow from './components/VerificationFlow';
 import AdminDashboard from './components/AdminDashboard';
-import { mockProducts } from './data/mockProducts';
+import NotificationContainer from './components/NotificationContainer';
+import ProductDetailPage from './pages/ProductDetailPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import MyOrdersPage from './pages/MyOrdersPage';
+import SellerOrdersPage from './pages/SellerOrdersPage';
+import ListProductPage from './pages/ListProductPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import ShopPage from './pages/ShopPage';
+import api from './lib/api';
 import { Product } from './types';
-import { useCart } from './contexts/CartContext';
 
 function AppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isOrderConfirmationOpen, setIsOrderConfirmationOpen] = useState(false);
-  const [confirmationOrderId, setConfirmationOrderId] = useState('');
   const [isOrderTrackingOpen, setIsOrderTrackingOpen] = useState(false);
   const [isDisputeOpen, setIsDisputeOpen] = useState(false);
   const [selectedOrderForDispute, setSelectedOrderForDispute] = useState('');
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [selectedOrderForVerification, setSelectedOrderForVerification] = useState('');
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const { addToCart, items, clearCart } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const { user } = useAuth();
 
-  const handleCheckout = () => {
-    setIsCartOpen(false);
-    setIsCheckoutOpen(true);
-  };
+  useEffect(() => {
+    // Fetch products from backend
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get('/products');
+        // Backend returns: { statusCode, data: { products, pagination }, message, success }
+        setProducts(response.data.data.products || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
 
-  const handleOrderSuccess = (orderId: string) => {
-    setConfirmationOrderId(orderId);
-    setIsCheckoutOpen(false);
-    setIsOrderConfirmationOpen(true);
-  };
-
-  const handleViewOrders = () => {
-    setIsOrderConfirmationOpen(false);
-    setIsOrderTrackingOpen(true);
-  };
+    fetchProducts();
+  }, []);
 
   const handleRaiseDispute = (orderId: string) => {
     setSelectedOrderForDispute(orderId);
@@ -69,44 +78,44 @@ function AppContent() {
         onAdminClick={() => user && setIsAdminOpen(true)}
       />
 
-      <Hero />
-
-      <ProductGrid
-        products={mockProducts}
-        onProductClick={(product) => setSelectedProduct(product)}
-      />
-
-      <Footer />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <Hero />
+              <FeaturedCollections />
+              {loadingProducts ? (
+                <div className="py-16 text-center">
+                  <p className="text-gray-600">Loading products...</p>
+                </div>
+              ) : (
+                <ProductGrid products={products} />
+              )}
+              <TrustSection />
+              <Footer />
+            </>
+          }
+        />
+        <Route path="/shop" element={<ShopPage />} />
+        <Route path="/product/:productId" element={<ProductDetailPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
+        <Route path="/seller-orders" element={<SellerOrdersPage />} />
+        <Route path="/list-product" element={<ListProductPage />} />
+        <Route path="/admin-login" element={<AdminLoginPage />} />
+      </Routes>
 
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        onCheckout={handleCheckout}
-      />
-
-      <ProductDetail
-        product={selectedProduct}
-        isOpen={selectedProduct !== null}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={addToCart}
       />
 
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-      />
-
-      <Checkout
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        onSuccess={handleOrderSuccess}
-      />
-
-      <OrderConfirmation
-        isOpen={isOrderConfirmationOpen}
-        onClose={() => setIsOrderConfirmationOpen(false)}
-        onViewOrders={handleViewOrders}
-        orderId={confirmationOrderId}
       />
 
       <OrderTracking
@@ -140,11 +149,16 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <AppContent />
-      </CartProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider>
+          <NotificationProvider>
+            <NotificationContainer />
+            <AppContent />
+          </NotificationProvider>
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

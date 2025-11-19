@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 
 interface User {
   _id: string;
-  name: string;
+  username: string;
   email: string;
   role: string;
 }
@@ -12,16 +12,11 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, role: 'buyer' | 'seller' | 'admin') => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true
-});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -31,8 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is logged in on mount
     const checkAuth = async () => {
       try {
-        const { data } = await api.get('/users/current-user');
-        setUser(data.data);
+        const response = await api.get('/users/current-user');
+        // Backend returns: { statusCode, data: user, message, success }
+        setUser(response.data.data);
       } catch (error) {
         setUser(null);
       } finally {
@@ -44,17 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data } = await api.post('/users/login', { email, password });
-    setUser(data.data);
+    const response = await api.post('/users/login', { email, password });
+    // Backend returns: { statusCode, data: { user, accessToken, refreshToken }, message, success }
+    setUser(response.data.data.user);
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
-    const { data } = await api.post('/users/register', { email, password, name });
-    setUser(data.data);
+  const signUp = async (email: string, password: string, name: string, role: 'buyer' | 'seller' | 'admin' = 'buyer') => {
+    const response = await api.post('/users/register', { email, password, username: name, role });
+    // Backend returns: { statusCode, data: createdUser, message, success }
+    setUser(response.data.data);
   };
 
   const signOut = async () => {
-    await api.post('/users/logout');
+    try {
+      await api.post('/users/logout');
+    } catch (error) {
+      // Ignore logout errors - clear local state anyway
+      console.log('Logout API call failed, clearing local state');
+    }
     setUser(null);
   };
 

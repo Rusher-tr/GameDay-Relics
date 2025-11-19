@@ -46,7 +46,7 @@ export const mockProducts: Product[] = [
     condition: 'Good',
     images: [
       'https://images.pexels.com/photos/358042/pexels-photo-358042.jpeg',
-      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg'
+      
     ],
     verified: true,
     team: 'Los Angeles Lakers',
