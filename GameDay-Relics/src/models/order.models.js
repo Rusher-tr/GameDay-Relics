@@ -43,6 +43,17 @@ const orderSchema = new Schema(
       enum: ["pending", "satisfied", "fine", "disputed"],
       default: "pending",
     },
+    // Delivery Gateway Selection
+    deliveryGatewayOptions: {
+      type: [String],
+      enum: ["DHL", "FedEx", "TCS", "Leopard", "M&P"],
+      default: [],
+    },
+    deliveryGatewaySelected: {
+      type: String,
+      enum: ["DHL", "FedEx", "TCS", "Leopard", "M&P", null],
+      default: null,
+    },
     shippingProvider: {
       type: String,
     },

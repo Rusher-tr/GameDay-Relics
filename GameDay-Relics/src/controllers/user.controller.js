@@ -260,6 +260,14 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  // If user is not authenticated, return null
+  if (!req.user) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, null, "No authenticated user")
+      );
+  }
   return res
     .status(200)
     .json(

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { loginUser, logoutUser, registerUser,refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updatePaymentSettings, getPaymentSettings } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT, optionalVerifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router()
@@ -25,7 +25,8 @@ router.route("/refresh-token").post(refreshAccessToken)
 // tested SUCCESS
 router.route("/change-password").post(verifyJWT,changeCurrentPassword)
 
-router.route("/current-user").get(verifyJWT, getCurrentUser)
+// Unique case
+router.route("/current-user").get(optionalVerifyJWT, getCurrentUser)
 
 //tested ------ NOT SURE HOW IT WORKS :p
 router.route("/update-account").patch(verifyJWT,updateAccountDetails)

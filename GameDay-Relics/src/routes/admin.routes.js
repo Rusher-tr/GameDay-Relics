@@ -12,6 +12,9 @@ import {
     getEscrowPayments,
     releaseEscrowPayment,
     getAllDisputes,
+    getDisputeDetails,
+    processDisputeRefund,
+    releaseEscrowForDispute,
     resolveDispute
 } from "../controllers/admin.controller.js";
 
@@ -40,6 +43,9 @@ router.delete("/users/:id/force-delete", verifyJWT, authorizeRoles("admin"), for
 router.get("/escrow-payments", verifyJWT, authorizeRoles("admin"), getEscrowPayments);
 router.post("/escrow/:escrowId/release", verifyJWT, authorizeRoles("admin"), releaseEscrowPayment);
 router.get("/disputes", verifyJWT, authorizeRoles("admin"), getAllDisputes);
+router.get("/disputes/:disputeId", verifyJWT, authorizeRoles("admin"), getDisputeDetails);
 router.post("/disputes/:disputeId/resolve", verifyJWT, authorizeRoles("admin"), resolveDispute);
+router.post("/disputes/:disputeId/refund", verifyJWT, authorizeRoles("admin"), processDisputeRefund);
+router.post("/disputes/:disputeId/release-escrow", verifyJWT, authorizeRoles("admin"), releaseEscrowForDispute);
 
 export default router;

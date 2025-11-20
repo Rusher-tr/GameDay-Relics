@@ -53,7 +53,7 @@ router.route("/delete/:id").delete(
 // Admin only routes
 router.route("/verify/:id").post(
     verifyJWT,
-    authorizeRoles("admin"),
+    authorizeRoles("admin","seller"),
     verifiyProduct
 );
 

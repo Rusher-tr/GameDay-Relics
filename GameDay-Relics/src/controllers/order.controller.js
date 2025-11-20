@@ -397,6 +397,104 @@ const markBuyerSatisfaction = asyncHandler(async (req, res) => {
   );
 });
 
+// Select delivery gateway options during checkout (buyer choice)
+const selectDeliveryGateway = asyncHandler(async (req, res) => {
+  const orderId = req.params.id;
+  const buyerId = req.user._id;
+  const { deliveryGatewayOptions } = req.body;
+
+  if (!orderId || !buyerId) {
+    throw new APIError(400, "Order ID and buyer authentication required");
+  }
+
+  if (!deliveryGatewayOptions || !Array.isArray(deliveryGatewayOptions) || deliveryGatewayOptions.length === 0) {
+    throw new APIError(400, "Please select at least one delivery gateway option");
+  }
+
+  // Validate all options are valid gateways
+  const validGateways = ["DHL", "FedEx", "TCS", "Leopard", "M&P"];
+  const invalidOptions = deliveryGatewayOptions.filter(opt => !validGateways.includes(opt));
+  if (invalidOptions.length > 0) {
+    throw new APIError(400, `Invalid gateway options: ${invalidOptions.join(', ')}`);
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order not found");
+  }
+
+  if (order.buyerId.toString() !== buyerId.toString()) {
+    throw new APIError(403, "Unauthorized: You can only select delivery for your own orders");
+  }
+
+  // Update order with selected delivery gateway options
+  order.deliveryGatewayOptions = deliveryGatewayOptions;
+  await order.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, order, "Delivery gateway options saved successfully")
+  );
+});
+
+// Confirm shipping provider selection (seller choice after payment)
+const confirmShippingProvider = asyncHandler(async (req, res) => {
+  const orderId = req.params.id;
+  const sellerId = req.user._id;
+  const { shippingProvider, trackingNumber } = req.body;
+
+  if (!orderId || !sellerId) {
+    throw new APIError(400, "Order ID and seller authentication required");
+  }
+
+  if (!shippingProvider) {
+    throw new APIError(400, "Please select a shipping provider");
+  }
+
+  const validGateways = ["DHL", "FedEx", "TCS", "Leopard", "M&P"];
+  if (!validGateways.includes(shippingProvider)) {
+    throw new APIError(400, `Invalid shipping provider: ${shippingProvider}`);
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order not found");
+  }
+
+  if (order.sellerId.toString() !== sellerId.toString()) {
+    throw new APIError(403, "Unauthorized: You can only update shipping for your own orders");
+  }
+
+  // Check if selected provider is in buyer's approved options
+  if (!order.deliveryGatewayOptions.includes(shippingProvider)) {
+    throw new APIError(400, `Buyer did not approve ${shippingProvider} as a delivery option`);
+  }
+
+  // Only allow shipping provider selection if order is in Escrow/Held status
+  if (!["Escrow", "Held"].includes(order.status)) {
+    throw new APIError(400, `Cannot update shipping provider for order in ${order.status} status. Order must be in Escrow or Held status.`);
+  }
+
+  // Update order with shipping provider and tracking number
+  order.deliveryGatewaySelected = shippingProvider;
+  order.shippingProvider = shippingProvider;
+  if (trackingNumber) {
+    order.trackingNumber = trackingNumber;
+  }
+  order.status = "shipped";
+  await order.save();
+
+  // Create audit log
+  await Auditlog.create({
+    action: "Shipping Provider Confirmed",
+    userId: sellerId,
+    amount: order.amount,
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, order, "Shipping provider confirmed and order marked as shipped")
+  );
+});
+
 // UNFINISHED
 const HoldinEscrow = asyncHandler(async (req, res) => { });
 //
@@ -433,6 +531,8 @@ export {
   getOrdersByUser,
   getOrdersBySeller,
   markBuyerSatisfaction,
+  selectDeliveryGateway,
+  confirmShippingProvider,
   HoldinEscrow,
   releaseEscrow,
   refundOrder,

@@ -2,6 +2,7 @@ import { X, AlertCircle, CheckCircle, DollarSign, Users, Package, TrendingUp, Tr
 import { useEffect, useState, useCallback } from 'react';
 import { Order, Dispute, EscrowPayment } from '../types';
 import api from '../lib/api';
+import DisputeDetailsModal from './DisputeDetailsModal';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -74,6 +75,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
   const [loading, setLoading] = useState(false);
 
   const [selectedDispute, setSelectedDispute] = useState<string | null>(null);
+  const [selectedDisputeForModal, setSelectedDisputeForModal] = useState<string | null>(null);
   const [resolution, setResolution] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
@@ -162,6 +164,71 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       fetchData();
     } catch (err) {
       console.error('Error resolving dispute:', err);
+    }
+  };
+
+  const handleRefundDispute = async (disputeId: string, resolution: string) => {
+    try {
+      await api.post(`/admins/disputes/${disputeId}/refund`, {
+        resolution
+      });
+      alert('Dispute resolved - Refund to buyer processed!');
+      setSelectedDisputeForModal(null);
+      fetchData();
+    } catch (err: any) {
+      console.error('Error processing refund:', err);
+      alert(err?.response?.data?.message || 'Failed to process refund');
+    }
+  };
+
+  const handleReleaseEscrowDispute = async (disputeId: string, resolution: string) => {
+    try {
+      const response = await api.post(`/admins/disputes/${disputeId}/release-escrow`, {
+        resolution
+      });
+      
+      const paymentInfo = response.data.data?.sellerPaymentInfo;
+      if (paymentInfo) {
+        const gateway = paymentInfo.paymentGateway;
+        let details = '';
+
+        if (gateway === 'stripe') {
+          details = `Stripe Account ID: ${paymentInfo.paymentDetails?.stripeAccountId || 'N/A'}`;
+        } else {
+          details = `Account Number: ${paymentInfo.paymentDetails?.accountNumber || 'N/A'}\nAccount Name: ${paymentInfo.paymentDetails?.accountName || 'N/A'}`;
+        }
+
+        alert(
+          `Dispute Resolved - Escrow Released!\n\n` +
+          `SELLER PAYMENT INFORMATION:\n` +
+          `Seller: ${paymentInfo.sellerName} (${paymentInfo.sellerEmail})\n` +
+          `Amount: $${paymentInfo.amount?.toLocaleString()}\n` +
+          `Payment Gateway: ${gateway.toUpperCase()}\n` +
+          `${details}\n\n` +
+          `Please process the payment manually using the above details.`
+        );
+      }
+      
+      setSelectedDisputeForModal(null);
+      fetchData();
+    } catch (err: any) {
+      console.error('Error releasing escrow:', err);
+      alert(err?.response?.data?.message || 'Failed to release escrow');
+    }
+  };
+
+  const handleResolveDisputeFromModal = async (disputeId: string, resolutionText: string) => {
+    try {
+      await api.post(`/admins/disputes/${disputeId}/resolve`, {
+        resolution: resolutionText,
+        orderId: disputes.find(d => d.id === disputeId)?.order_id
+      });
+      alert('Dispute resolved successfully!');
+      setSelectedDisputeForModal(null);
+      fetchData();
+    } catch (err: any) {
+      console.error('Error resolving dispute:', err);
+      alert(err?.response?.data?.message || 'Failed to resolve dispute');
     }
   };
 
@@ -344,67 +411,50 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
               )}
             </div>
           ) : tab === 'disputes' ? (
-            <div className="space-y-4">
-              {disputes.length === 0 ? (
-                <div className="text-center py-12 text-slate-600">
-                  <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                  <p>No open disputes</p>
-                </div>
-              ) : (
-                disputes.map((dispute) => (
-                  <div key={dispute.id} className="border-2 border-slate-200 rounded-lg overflow-hidden hover:border-red-300 transition-colors">
-                    <button
-                      onClick={() => setSelectedDispute(selectedDispute === dispute.id ? null : dispute.id)}
-                      className="w-full p-4 hover:bg-slate-50 transition-colors text-left"
-                    >
-                      <div className="flex items-start justify-between">
+            <>
+              <div className="space-y-4">
+                {disputes.length === 0 ? (
+                  <div className="text-center py-12 text-slate-600">
+                    <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p>No open disputes</p>
+                  </div>
+                ) : (
+                  disputes.map((dispute) => (
+                    <div key={dispute.id} className="border-2 border-red-200 rounded-lg overflow-hidden hover:border-red-400 transition-colors bg-white">
+                      <div className="p-4 flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-bold text-slate-900 capitalize">Reason: {dispute.reason.replace('_', ' ')}</p>
-                          <p className="text-sm text-slate-600 mt-1">{dispute.description}</p>
+                          <p className="text-sm text-slate-600 mt-1 line-clamp-2">{dispute.description}</p>
                           <p className="text-xs text-slate-500 mt-2">Raised: {new Date(dispute.created_at).toLocaleDateString()}</p>
                         </div>
-                        <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold border border-red-300">
-                          OPEN
-                        </span>
-                      </div>
-                    </button>
-
-                    {selectedDispute === dispute.id && (
-                      <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Resolution
-                          </label>
-                          <textarea
-                            value={resolution}
-                            onChange={(e) => setResolution(e.target.value)}
-                            placeholder="Enter resolution details and action taken..."
-                            rows={3}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          />
-                        </div>
-
-                        <div className="flex space-x-3">
+                        <div className="flex flex-col gap-2 ml-4">
+                          <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold border border-red-300 whitespace-nowrap">
+                            OPEN
+                          </span>
                           <button
-                            onClick={() => setSelectedDispute(null)}
-                            className="flex-1 px-4 py-2 border-2 border-slate-300 text-slate-900 rounded-lg font-semibold hover:bg-slate-100 transition-colors"
+                            onClick={() => setSelectedDisputeForModal(dispute.id)}
+                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition-colors whitespace-nowrap"
                           >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleResolveDispute(dispute.id, dispute.order_id)}
-                            disabled={!resolution.trim()}
-                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Resolve Dispute
+                            View Details
                           </button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Dispute Details Modal */}
+              <DisputeDetailsModal
+                disputeId={selectedDisputeForModal || ''}
+                isOpen={!!selectedDisputeForModal}
+                onClose={() => setSelectedDisputeForModal(null)}
+                onRefund={handleRefundDispute}
+                onReleaseEscrow={handleReleaseEscrowDispute}
+                onResolve={handleResolveDisputeFromModal}
+                onRefreshList={fetchData}
+              />
+            </>
           ) : tab === 'users' ? (
             <div className="space-y-4">
               {users.length === 0 ? (

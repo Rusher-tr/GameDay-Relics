@@ -248,38 +248,89 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 const verifiyProduct = asyncHandler(async (req, res) => {
   const productId = req.params.id;
-  const { verified, verificationby, certificationId, certificationURL } = req.body;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+  const { verificationby, certificationId, certificationURL } = req.body;
 
-  if (
-    [verified, verificationby, certificationId, certificationURL].some(
-      (field) => field?.trim() === "",
-    )
-  ) {
-    throw new APIError(400, "At least one field is required to update the product");
+  // Validate required fields
+  if (!certificationId || !certificationId.trim()) {
+    throw new APIError(400, "Certification ID is required");
+  }
+
+  if (!certificationURL || !certificationURL.trim()) {
+    throw new APIError(400, "Certification URL is required");
+  }
+
+  if (!verificationby || !verificationby.trim()) {
+    throw new APIError(400, "Verification service is required");
   }
 
   if (!productId) {
-    throw new APIError(400, "Product ID error")
+    throw new APIError(400, "Product ID is required");
   }
 
-  const productcheck = await Product.findById(productId).select(verified);
-  if(productcheck){
-    throw new APIError("Product is Already Verified")
+  // Check if product exists
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new APIError(404, "Product not found");
   }
-  // STUCK NEED SOME SHIT HERE 
 
-  const verification = await Verification.create({
-    productId: ProductId,
-    verified,
-    verificationby,
-    certificationId,
-    certificationURL
-  })
-  if (!verification) { 
-    throw new APIError(500, "Something went wrong in verification creation");
+  // If user is seller (not admin), verify they own the product
+  if (userRole === "seller" && product.sellerId.toString() !== userId.toString()) {
+    throw new APIError(403, "You can only verify your own products");
   }
-  return res.status(200).json(new ApiResponse(200, verification, "Product Verified In Queue, You will be notified about the results through mail"))
 
+  // Check if product is already verified (verified flag is true)
+  if (product.verified === true) {
+    throw new APIError(400, "Product is already verified");
+  }
+
+  // Create verification record
+  try {
+    const verification = await Verification.create({
+      productId: productId,
+      verified: true,
+      verificationBy: String(verificationby).trim(),
+      certificationId: String(certificationId).trim(),
+      certificationURL: String(certificationURL).trim(),
+      verifiedAt: new Date()
+    });
+
+    if (!verification) { 
+      throw new APIError(500, "Something went wrong in verification creation");
+    }
+
+    // Update product: set verified = true and save verificationId reference
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      {
+        $set: {
+          verified: true,
+          verificationId: verification._id
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      throw new APIError(500, "Failed to update product verification status");
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        verification,
+        product: updatedProduct
+      }, "Product verified successfully")
+    );
+  } catch (error) {
+    // If it's already an APIError, re-throw it
+    if (error instanceof APIError) {
+      throw error;
+    }
+    // Otherwise, wrap it in an APIError with proper message
+    console.error("Verification creation error:", error);
+    throw new APIError(500, `Verification failed: ${error.message || "Unknown error"}`);
+  }
 });
 
 export {

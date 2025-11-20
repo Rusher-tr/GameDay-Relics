@@ -19,6 +19,8 @@ interface Order {
   status: 'pending' | 'Escrow' | 'Held' | 'shipped' | 'Completed' | 'Disputed' | 'Refunded';
   amount: number;
   escrowRelease: boolean;
+  deliveryGatewayOptions: string[];
+  deliveryGatewaySelected: string | null;
   shippingProvider: string | null;
   trackingNumber: string | null;
   createdAt: string;
@@ -32,6 +34,8 @@ export default function SellerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentSettings, setShowPaymentSettings] = useState(false);
+  const [selectedShipping, setSelectedShipping] = useState<{ [key: string]: { provider: string; trackingNumber: string } }>({});
+  const [submittingShipping, setSubmittingShipping] = useState<string | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -93,6 +97,41 @@ export default function SellerOrdersPage() {
         return 'bg-gray-100 text-gray-800 border-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const handleConfirmShipping = async (orderId: string) => {
+    const shipping = selectedShipping[orderId];
+    if (!shipping || !shipping.provider || !shipping.trackingNumber) {
+      alert('Please select a delivery provider and enter a tracking number');
+      return;
+    }
+
+    setSubmittingShipping(orderId);
+    try {
+      await api.post(`/orders/${orderId}/confirm-shipping`, {
+        shippingProvider: shipping.provider,
+        trackingNumber: shipping.trackingNumber
+      });
+      
+      setOrders(orders.map(order => 
+        order._id === orderId 
+          ? { ...order, shippingProvider: shipping.provider, trackingNumber: shipping.trackingNumber, status: 'shipped' }
+          : order
+      ));
+      
+      setSelectedShipping(prev => {
+        const updated = { ...prev };
+        delete updated[orderId];
+        return updated;
+      });
+
+      alert('Shipping provider confirmed successfully!');
+    } catch (err: any) {
+      console.error('Error confirming shipping:', err);
+      alert(err?.response?.data?.message || 'Failed to confirm shipping');
+    } finally {
+      setSubmittingShipping(null);
     }
   };
 
@@ -324,6 +363,69 @@ export default function SellerOrdersPage() {
                           )}
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Shipping Provider Selection */}
+                {['Escrow', 'Held'].includes(order.status) && !order.shippingProvider && order.deliveryGatewayOptions && order.deliveryGatewayOptions.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold text-slate-900 mb-3">Select Delivery Gateway</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                          {order.deliveryGatewayOptions.map((provider) => (
+                            <button
+                              key={provider}
+                              onClick={() => setSelectedShipping(prev => ({
+                                ...prev,
+                                [order._id]: { ...prev[order._id], provider }
+                              }))}
+                              className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                                selectedShipping[order._id]?.provider === provider
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                              }`}
+                            >
+                              {provider}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Tracking Number
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter tracking number"
+                          value={selectedShipping[order._id]?.trackingNumber || ''}
+                          onChange={(e) => setSelectedShipping(prev => ({
+                            ...prev,
+                            [order._id]: { ...prev[order._id], trackingNumber: e.target.value }
+                          }))}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => handleConfirmShipping(order._id)}
+                        disabled={submittingShipping === order._id}
+                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {submittingShipping === order._id ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Confirming...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Confirm Shipping</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}

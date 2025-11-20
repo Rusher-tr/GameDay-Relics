@@ -10,6 +10,8 @@ import {
   getOrdersByUser,
   getOrdersBySeller,
   markBuyerSatisfaction,
+  selectDeliveryGateway,
+  confirmShippingProvider,
   //holdInEscrow,
   releaseEscrow,
   refundOrder,
@@ -53,6 +55,12 @@ router.post("/:id/cancel", verifyJWT, authorizeRoles("buyer"), cancelOrder);
 
 // Mark buyer satisfaction
 router.post("/:id/satisfaction", verifyJWT, authorizeRoles("buyer"), markBuyerSatisfaction);
+
+// Delivery Gateway Selection (buyer during checkout)
+router.post("/:id/select-delivery", verifyJWT, authorizeRoles("buyer"), selectDeliveryGateway);
+
+// Shipping Provider Confirmation (seller after payment)
+router.post("/:id/confirm-shipping", verifyJWT, authorizeRoles("seller"), confirmShippingProvider);
 
 // Seller actions: hold/release escrow, update shipping
 

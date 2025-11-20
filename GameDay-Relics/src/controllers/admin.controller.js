@@ -397,6 +397,228 @@ const getAllDisputes = asyncHandler(async (req, res) => {
   );
 });
 
+// Get full dispute details with all information for admin viewing
+const getDisputeDetails = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const disputeId = req.params.disputeId;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  const dispute = await Dispute.findById(disputeId)
+    .populate("orderId")
+    .populate("buyerId", "username email paymentDetails")
+    .populate("sellerId", "username email paymentGateway paymentDetails");
+
+  if (!dispute) {
+    throw new APIError(404, "Dispute not found");
+  }
+
+  // Format the response with all necessary details
+  const formattedDispute = {
+    id: dispute._id.toString(),
+    reason: dispute.reason,
+    description: dispute.description,
+    status: dispute.status,
+    resolution: dispute.resolution,
+    evidence: dispute.evidence || [],
+    createdAt: dispute.createdAt,
+    resolvedAt: dispute.resolvedAt,
+    order: dispute.orderId ? {
+      id: dispute.orderId._id.toString(),
+      productId: dispute.orderId.productId,
+      status: dispute.orderId.status,
+      amount: dispute.orderId.amount,
+      transactionId: dispute.orderId.transactionId,
+      createdAt: dispute.orderId.createdAt,
+    } : null,
+    buyer: dispute.buyerId ? {
+      id: dispute.buyerId._id.toString(),
+      username: dispute.buyerId.username,
+      email: dispute.buyerId.email,
+    } : null,
+    seller: dispute.sellerId ? {
+      id: dispute.sellerId._id.toString(),
+      username: dispute.sellerId.username,
+      email: dispute.sellerId.email,
+      paymentGateway: dispute.sellerId.paymentGateway,
+      paymentDetails: dispute.sellerId.paymentDetails,
+    } : null,
+  };
+
+  return res.status(200).json(
+    new ApiResponse(200, formattedDispute, "Dispute details fetched successfully")
+  );
+});
+
+// Process refund for a dispute - refund to buyer with resolution notes
+const processDisputeRefund = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const disputeId = req.params.disputeId;
+  const { resolution } = req.body;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  if (!resolution || !resolution.trim()) {
+    throw new APIError(400, "Resolution notes are required");
+  }
+
+  const dispute = await Dispute.findById(disputeId)
+    .populate("orderId")
+    .populate("buyerId", "username email paymentDetails")
+    .populate("sellerId", "username email paymentGateway paymentDetails");
+
+  if (!dispute) {
+    throw new APIError(404, "Dispute not found");
+  }
+
+  const order = dispute.orderId;
+  if (!order) {
+    throw new APIError(400, "Order associated with dispute not found");
+  }
+
+  const buyer = dispute.buyerId;
+  const seller = dispute.sellerId;
+
+  if (!buyer) {
+    throw new APIError(400, "Buyer information not found");
+  }
+
+  if (!seller) {
+    throw new APIError(400, "Seller information not found");
+  }
+
+  // Update order status to Refunded
+  order.status = "Refunded";
+  await order.save();
+
+  // Update dispute status to Resolved with refund resolution
+  dispute.status = "Resolved";
+  dispute.resolution = resolution;
+  dispute.resolvedAt = new Date();
+  dispute.resolvedBy = adminId;
+  await dispute.save();
+
+  // Create audit log
+  await Auditlog.create({
+    action: "Dispute Resolved - Refund to Buyer",
+    userId: adminId,
+    amount: order.amount,
+    sellerId: seller._id,
+  });
+
+  const refundInfo = {
+    disputeId: dispute._id.toString(),
+    orderId: order._id.toString(),
+    amount: order.amount,
+    action: "refund_buyer",
+    resolution: resolution,
+    timestamp: new Date(),
+  };
+
+  return res.status(200).json(
+    new ApiResponse(200, refundInfo, "Dispute resolved - Refund processed to buyer.")
+  );
+});
+
+// Release escrow for a dispute - release payment to seller with resolution notes
+const releaseEscrowForDispute = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const disputeId = req.params.disputeId;
+  const { resolution } = req.body;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  if (!resolution || !resolution.trim()) {
+    throw new APIError(400, "Resolution notes are required");
+  }
+
+  const dispute = await Dispute.findById(disputeId)
+    .populate("orderId")
+    .populate("buyerId", "username email")
+    .populate("sellerId", "username email paymentGateway paymentDetails");
+
+  if (!dispute) {
+    throw new APIError(404, "Dispute not found");
+  }
+
+  const order = dispute.orderId;
+  if (!order) {
+    throw new APIError(400, "Order associated with dispute not found");
+  }
+
+  const seller = dispute.sellerId;
+
+  if (!seller) {
+    throw new APIError(400, "Seller information not found");
+  }
+
+  // Check if seller has configured payment settings
+  if (!seller.paymentGateway) {
+    throw new APIError(400, "Seller has not configured payment settings. Cannot release escrow.");
+  }
+
+  // Release escrow - set escrowRelease to true and status to Completed
+  order.escrowRelease = true;
+  order.status = "Completed";
+  await order.save();
+
+  // Update dispute status to Resolved with escrow release resolution
+  dispute.status = "Resolved";
+  dispute.resolution = resolution;
+  dispute.resolvedAt = new Date();
+  dispute.resolvedBy = adminId;
+  await dispute.save();
+
+  // Create audit log
+  await Auditlog.create({
+    action: `Dispute Resolved - Escrow Released to ${seller.paymentGateway}`,
+    userId: adminId,
+    amount: order.amount,
+    sellerId: seller._id,
+  });
+
+  const responseData = {
+    disputeId: dispute._id.toString(),
+    orderId: order._id.toString(),
+    amount: order.amount,
+    action: "release_seller",
+    resolution: resolution,
+    sellerPaymentInfo: {
+      sellerId: seller._id,
+      sellerName: seller.username,
+      sellerEmail: seller.email,
+      paymentGateway: seller.paymentGateway,
+      paymentDetails: seller.paymentDetails,
+    },
+    timestamp: new Date(),
+  };
+
+  return res.status(200).json(
+    new ApiResponse(200, responseData, "Dispute resolved - Escrow released to seller.")
+  );
+});
+
 // Resolve dispute
 const resolveDispute = asyncHandler(async (req, res) => {
   const adminId = req.user._id;
@@ -455,5 +677,8 @@ export {
   getEscrowPayments,
   releaseEscrowPayment,
   getAllDisputes,
+  getDisputeDetails,
+  processDisputeRefund,
+  releaseEscrowForDispute,
   resolveDispute
 };

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, Shield, AlertCircle, CreditCard } from 'lucide-react';
+import { ArrowLeft, Shield, AlertCircle, CreditCard, Truck } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
@@ -11,6 +11,9 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedDeliveryOptions, setSelectedDeliveryOptions] = useState<string[]>([]);
+
+  const deliveryGateways = ['DHL', 'FedEx', 'TCS', 'Leopard', 'M&P'];
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
@@ -32,9 +35,22 @@ export default function CheckoutPage() {
     );
   }
 
+  const toggleDeliveryOption = (gateway: string) => {
+    setSelectedDeliveryOptions(prev =>
+      prev.includes(gateway)
+        ? prev.filter(g => g !== gateway)
+        : [...prev, gateway]
+    );
+  };
+
   const handleProceedToPay = async () => {
     if (!user) {
       setError('Please sign in to continue');
+      return;
+    }
+
+    if (selectedDeliveryOptions.length === 0) {
+      setError('Please select at least one delivery option');
       return;
     }
 
@@ -58,6 +74,13 @@ export default function CheckoutPage() {
 
       // Backend returns: { success: true, order: {...}, checkoutUrl: "stripe.com/..." }
       if (response.data.success && response.data.checkoutUrl) {
+        const orderId = response.data.order._id;
+
+        // Save delivery gateway selection to the order
+        await api.post(`/orders/${orderId}/select-delivery`, {
+          deliveryGatewayOptions: selectedDeliveryOptions
+        });
+
         // Redirect to Stripe checkout page
         window.location.href = response.data.checkoutUrl;
       } else {
@@ -112,6 +135,38 @@ export default function CheckoutPage() {
                   <span className="text-sm">{error}</span>
                 </div>
               )}
+
+              {/* Delivery Gateway Selection */}
+              <div className="bg-white p-8 rounded-xl border border-slate-200">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Truck className="h-6 w-6 text-slate-700" />
+                  <h2 className="text-xl font-bold text-slate-900">Select Delivery Options</h2>
+                </div>
+                <p className="text-sm text-slate-600 mb-4">Choose one or more delivery providers for the seller to select from:</p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {deliveryGateways.map((gateway) => (
+                    <button
+                      key={gateway}
+                      onClick={() => toggleDeliveryOption(gateway)}
+                      className={`px-4 py-3 rounded-lg font-semibold border-2 transition-all text-center ${
+                        selectedDeliveryOptions.includes(gateway)
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400'
+                      }`}
+                    >
+                      {gateway}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedDeliveryOptions.length === 0 && (
+                  <p className="text-xs text-red-600 mt-2">Please select at least one delivery option</p>
+                )}
+                {selectedDeliveryOptions.length > 0 && (
+                  <p className="text-xs text-green-600 mt-2">✓ Selected: {selectedDeliveryOptions.join(', ')}</p>
+                )}
+              </div>
 
               {/* Payment Section */}
               <div className="space-y-6 bg-white p-8 rounded-xl border border-slate-200">

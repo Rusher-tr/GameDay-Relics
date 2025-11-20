@@ -26,3 +26,29 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         throw new APIError(401, err?.message, "Invalid Access----Token")
     }
 })
+
+// Optional JWT verification - doesn't throw error if no token, just sets req.user if token is valid
+export const optionalVerifyJWT = asyncHandler(async (req, _, next) => {
+    try {
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+        if (!token) {
+            req.user = null;
+            return next()
+        }
+        const decodedToken = Jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+        const user = await User.findById(decodedToken?._id).select(
+            "-password -refreshToken"
+        )
+        if (user) {
+            req.user = user;
+        } else {
+            req.user = null;
+        }
+        next()
+    }
+    catch (err) {
+        // If token is invalid, just set user to null and continue
+        req.user = null;
+        next()
+    }
+})
