@@ -23,7 +23,8 @@ export default function AdminLoginPage() {
       // The navbar will show admin panel if user is admin
       navigate('/');
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Invalid credentials';
+      // Use enhanced error message from API interceptor
+      const errorMessage = err?.userMessage || err?.response?.data?.message || err?.message || 'Invalid credentials';
       setError(errorMessage);
     } finally {
       setLoading(false);

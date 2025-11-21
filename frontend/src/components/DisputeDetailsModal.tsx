@@ -1,6 +1,8 @@
 import { X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
+import EscrowReleasePopup from './EscrowReleasePopup';
+import {toast} from "react-toastify"
 
 interface DisputeDetails {
   id: string;
@@ -43,7 +45,6 @@ interface DisputeDetailsModalProps {
   onClose: () => void;
   onRefund: (disputeId: string, resolution: string) => void;
   onReleaseEscrow: (disputeId: string, resolution: string) => void;
-  onResolve: (disputeId: string, resolution: string) => void;
   onRefreshList: () => void;
 }
 
@@ -53,7 +54,6 @@ export default function DisputeDetailsModal({
   onClose,
   onRefund,
   onReleaseEscrow,
-  onResolve,
   onRefreshList,
 }: DisputeDetailsModalProps) {
   const [dispute, setDispute] = useState<DisputeDetails | null>(null);
@@ -63,6 +63,7 @@ export default function DisputeDetailsModal({
   const [resolution, setResolution] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedAction, setSelectedAction] = useState<'refund' | 'release' | null>(null);
+  const [showEscrowPopup, setShowEscrowPopup] = useState(false);
 
   useEffect(() => {
     if (isOpen && disputeId) {
@@ -74,7 +75,8 @@ export default function DisputeDetailsModal({
     setLoading(true);
     try {
       const response = await api.get(`/admins/disputes/${disputeId}`);
-      setDispute(response.data.data);
+      const data = response.data as { data: DisputeDetails };
+      setDispute(data.data);
       setResolution('');
     } catch (err) {
       console.error('Error fetching dispute details:', err);
@@ -85,7 +87,7 @@ export default function DisputeDetailsModal({
 
   const handleRefund = async () => {
     if (!resolution.trim()) {
-      alert('Please enter resolution notes');
+      toast.error('Please enter resolution notes');
       return;
     }
     setActionLoading(true);
@@ -102,34 +104,22 @@ export default function DisputeDetailsModal({
 
   const handleReleaseEscrow = async () => {
     if (!resolution.trim()) {
-      alert('Please enter resolution notes');
+      toast.error('Please enter resolution notes');
       return;
     }
     setActionLoading(true);
     try {
       await onReleaseEscrow(disputeId, resolution);
-      await fetchDisputeDetails();
-      onRefreshList();
+      // Show the celebration popup
+      setShowEscrowPopup(true);
+      // Wait for animation then refresh
+      setTimeout(() => {
+        fetchDisputeDetails();
+        onRefreshList();
+        setShowEscrowPopup(false);
+      }, 3000);
     } catch (err) {
       console.error('Error releasing escrow:', err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleResolve = async () => {
-    if (!resolution.trim()) {
-      alert('Please enter a resolution description');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await onResolve(disputeId, resolution);
-      await fetchDisputeDetails();
-      onRefreshList();
-    } catch (err) {
-      console.error('Error resolving dispute:', err);
-    } finally {
       setActionLoading(false);
     }
   };
@@ -137,7 +127,8 @@ export default function DisputeDetailsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
+    <>
+      <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="absolute w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-2xl z-50">
@@ -480,6 +471,25 @@ export default function DisputeDetailsModal({
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Escrow Release Celebration Popup */}
+      <EscrowReleasePopup
+        isVisible={showEscrowPopup}
+        sellerName={dispute?.seller?.username || 'Seller'}
+        amount={dispute?.order?.amount || 0}
+        onConfirm={() => {
+          setShowEscrowPopup(false);
+          setSelectedAction(null);
+          setResolution('');
+        }}
+        onCancel={() => {
+          setShowEscrowPopup(false);
+          setSelectedAction(null);
+          setResolution('');
+        }}
+        isLoading={actionLoading}
+      />
+    </>
   );
 }

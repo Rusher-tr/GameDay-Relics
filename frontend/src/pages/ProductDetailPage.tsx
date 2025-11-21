@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Shield, Package, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../contexts/CartContext';
@@ -10,6 +10,7 @@ import api from '../lib/api';
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,7 @@ export default function ProductDetailPage() {
 
   const isSeller = user?.role === 'seller';
   const canAddToCart = !isSeller && !hasPendingOrder;
+  const shouldRefresh = searchParams.get('refresh') === 'true';
 
   useEffect(() => {
     // Fetch product from backend API
@@ -27,7 +29,8 @@ export default function ProductDetailPage() {
       try {
         const response = await api.get(`/products/${productId}`);
         // Backend returns: { statusCode, data: product, message, success }
-        setProduct(response.data.data);
+        const responseData = response.data as { data: Product };
+        setProduct(responseData.data);
       } catch (error) {
         console.error('Error fetching product:', error);
         setProduct(null);
@@ -45,29 +48,55 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const checkPendingOrder = async () => {
       if (!user || !productId || user.role !== 'buyer') {
+        console.log('[ProductDetail] Skipping pending order check:', { user: !!user, productId, role: user?.role });
         setHasPendingOrder(false);
         return;
       }
 
+      console.log('[ProductDetail] Checking pending orders for product:', productId);
       try {
         const response = await api.get('/orders/mine');
-        const orders = response.data.data || [];
+        const responseData = response.data as { data: any[] };
+        const orders = responseData.data || [];
+        console.log('[ProductDetail] Total orders from API:', orders.length);
 
-        // Check if there's any order for this product that is NOT completed or refunded
-        const pendingOrder = orders.find((order: any) =>
-          order.productId?._id === productId &&
-          !['Completed', 'Refunded'].includes(order.status)
-        );
+        // Define what statuses are considered "active/pending" (blocking repurchase)
+        const activePendingStatuses = ['pending', 'Escrow', 'Held', 'shipped', 'Disputed'];
+        
+        // Check if there's any ACTIVE order for this product
+        // Completed and Refunded orders should NOT block repurchasing
+        const pendingOrder = orders.find((order: any) => {
+          const orderProductId = order.productId?._id || order.productId;
+          const isMatchingProduct = orderProductId === productId;
+          const isActiveOrder = activePendingStatuses.includes(order.status);
+          
+          if (isMatchingProduct) {
+            console.log('[ProductDetail] Found order for this product:', {
+              orderId: order._id,
+              status: order.status,
+              isActive: isActiveOrder
+            });
+          }
+          
+          return isMatchingProduct && isActiveOrder;
+        });
+
+        console.log('[ProductDetail] Pending order check result:', {
+          productId,
+          hasPendingOrder: !!pendingOrder,
+          status: pendingOrder?.status,
+          orderId: pendingOrder?._id
+        });
 
         setHasPendingOrder(!!pendingOrder);
       } catch (error) {
-        console.error('Error checking pending orders:', error);
+        console.error('[ProductDetail] Error checking pending orders:', error);
         setHasPendingOrder(false);
       }
     };
 
     checkPendingOrder();
-  }, [user, productId]);
+  }, [user, productId, shouldRefresh]);
 
   if (loading) {
     return (
@@ -217,7 +246,7 @@ export default function ProductDetailPage() {
               {/* Stock Info */}
               <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-sm text-slate-600">
-                  <span className="font-semibold text-slate-900">Stock Available:</span> {product.stock} item{product.stock !== 1 ? 's' : ''}
+                  <span className="font-semibold text-slate-900">Stock Available:</span> In Stock
                 </p>
               </div>
 

@@ -1,10 +1,11 @@
 // routes/payment.routes.js
 import express from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { createCheckoutSession_INTERNAL } from "../controllers/payment.controller.js";
+import { createCheckoutSession_INTERNAL, handlePaymentCancel } from "../controllers/payment.controller.js";
 import { stripe } from "../utils/stripe.js";
 import { Order } from "../models/order.models.js";
 import { APIError } from "../utils/Apierror.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -92,6 +93,17 @@ router.get(
       sessionId: sessionId || null,
     });
   })
+);
+
+/**
+ * POST /api/v1/payment/cancel-order
+ * Authenticated endpoint to cancel/delete pending order when payment is cancelled
+ * Requires: User authentication (buyerId from token)
+ */
+router.post(
+  "/cancel-order",
+  verifyJWT,
+  handlePaymentCancel
 );
 
 export default router;

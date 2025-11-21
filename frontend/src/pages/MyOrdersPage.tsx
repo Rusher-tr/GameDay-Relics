@@ -5,7 +5,7 @@ import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Product } from '../types';
 import DisputeForm from '../components/DisputeForm';
-
+import {toast} from "react-toastify"
 interface Order {
   _id: string;
   productId: Product | null;
@@ -65,7 +65,7 @@ export default function MyOrdersPage() {
       await fetchOrders(); // Refresh orders
     } catch (err: any) {
       console.error('Error marking satisfaction:', err);
-      alert(err?.response?.data?.message || 'Failed to mark satisfaction');
+      toast.error(err?.response?.data?.message || 'Failed to mark satisfaction');
     } finally {
       setActionLoading(null);
     }

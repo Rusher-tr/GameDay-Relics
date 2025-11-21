@@ -6,16 +6,6 @@ import { Verification } from "../models/verification.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { Auditlog } from "../models/auditlog.models.js";
 
-// const getAllProducts = asyncHandler(async (req, res) => {
-//   const products = await Product.find({});
-//   return res
-//     .status(200)
-//     .json(
-//       new ApiResponse(200, "Products fetched successfully", products),
-//     );
-//  });
-
-
 // working 
 const getAllProducts = asyncHandler(async (req, res) => {
   // get page number from query (default = 1)

@@ -7,7 +7,6 @@ import {
     updateProduct,
     deleteProduct,
     verifiyProduct,
-
 } from "../controllers/product.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";

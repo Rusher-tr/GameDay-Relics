@@ -87,7 +87,7 @@ export default function CheckoutPage() {
         setError('Failed to create checkout session');
       }
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Payment failed';
+      const errorMessage = err?.userMessage || err?.response?.data?.message || err?.message || 'Payment failed';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -143,17 +143,16 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-slate-900">Select Delivery Options</h2>
                 </div>
                 <p className="text-sm text-slate-600 mb-4">Choose one or more delivery providers for the seller to select from:</p>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {deliveryGateways.map((gateway) => (
                     <button
                       key={gateway}
                       onClick={() => toggleDeliveryOption(gateway)}
-                      className={`px-4 py-3 rounded-lg font-semibold border-2 transition-all text-center ${
-                        selectedDeliveryOptions.includes(gateway)
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400'
-                      }`}
+                      className={`px-4 py-3 rounded-lg font-semibold border-2 transition-all text-center ${selectedDeliveryOptions.includes(gateway)
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400'
+                        }`}
                     >
                       {gateway}
                     </button>
@@ -215,10 +214,10 @@ export default function CheckoutPage() {
             <div className="lg:col-span-1">
               <div className="sticky top-24 bg-white p-6 rounded-xl border border-slate-200">
                 <h2 className="font-bold text-slate-900 mb-4 text-lg">Order Summary</h2>
-                
+
                 <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
                   {items.map((item) => (
-                    <div key={item.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div key={item._id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                       <img
                         src={item.images[0]}
                         alt={item.title}

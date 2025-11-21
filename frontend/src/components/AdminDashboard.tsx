@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Order, Dispute, EscrowPayment } from '../types';
 import api from '../lib/api';
 import DisputeDetailsModal from './DisputeDetailsModal';
+import {toast} from "react-toastify"
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -132,7 +133,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
           details = `Account Number: ${paymentInfo.paymentDetails?.accountNumber || 'N/A'}\nAccount Name: ${paymentInfo.paymentDetails?.accountName || 'N/A'}`;
         }
 
-        alert(
+        toast.success(
           `Escrow Released Successfully!\n\n` +
           `SELLER PAYMENT INFORMATION:\n` +
           `Seller: ${paymentInfo.sellerName} (${paymentInfo.sellerEmail})\n` +
@@ -146,7 +147,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       fetchData();
     } catch (err: any) {
       console.error('Error releasing escrow:', err);
-      alert(err?.response?.data?.message || 'Failed to release escrow. Please check if the seller has configured payment settings.');
+      toast.error(err?.response?.data?.message || 'Failed to release escrow. Please check if the seller has configured payment settings.');
     }
   };
 
@@ -172,12 +173,12 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       await api.post(`/admins/disputes/${disputeId}/refund`, {
         resolution
       });
-      alert('Dispute resolved - Refund to buyer processed!');
+      toast.success('Dispute resolved - Refund to buyer processed!');
       setSelectedDisputeForModal(null);
       fetchData();
     } catch (err: any) {
       console.error('Error processing refund:', err);
-      alert(err?.response?.data?.message || 'Failed to process refund');
+      toast.error(err?.response?.data?.message || 'Failed to process refund');
     }
   };
 
@@ -198,7 +199,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
           details = `Account Number: ${paymentInfo.paymentDetails?.accountNumber || 'N/A'}\nAccount Name: ${paymentInfo.paymentDetails?.accountName || 'N/A'}`;
         }
 
-        alert(
+        toast.success(
           `Dispute Resolved - Escrow Released!\n\n` +
           `SELLER PAYMENT INFORMATION:\n` +
           `Seller: ${paymentInfo.sellerName} (${paymentInfo.sellerEmail})\n` +
@@ -213,22 +214,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       fetchData();
     } catch (err: any) {
       console.error('Error releasing escrow:', err);
-      alert(err?.response?.data?.message || 'Failed to release escrow');
-    }
-  };
-
-  const handleResolveDisputeFromModal = async (disputeId: string, resolutionText: string) => {
-    try {
-      await api.post(`/admins/disputes/${disputeId}/resolve`, {
-        resolution: resolutionText,
-        orderId: disputes.find(d => d.id === disputeId)?.order_id
-      });
-      alert('Dispute resolved successfully!');
-      setSelectedDisputeForModal(null);
-      fetchData();
-    } catch (err: any) {
-      console.error('Error resolving dispute:', err);
-      alert(err?.response?.data?.message || 'Failed to resolve dispute');
+      toast.error(err?.response?.data?.message || 'Failed to release escrow');
     }
   };
 
@@ -242,7 +228,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       await fetchData();
     } catch (err: any) {
       console.error('Error deleting user:', err);
-      alert(err?.response?.data?.message || 'Failed to delete user');
+      toast.error(err?.response?.data?.message || 'Failed to delete user');
       // Refresh data even on error to ensure UI is in sync
       await fetchData();
     }
@@ -260,7 +246,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       await fetchData();
     } catch (err: any) {
       console.error('Error canceling order:', err);
-      alert(err?.response?.data?.message || 'Failed to cancel order');
+      toast.error(err?.response?.data?.message || 'Failed to cancel order');
       // Refresh data even on error to ensure UI is in sync
       await fetchData();
     }
@@ -451,7 +437,6 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                 onClose={() => setSelectedDisputeForModal(null)}
                 onRefund={handleRefundDispute}
                 onReleaseEscrow={handleReleaseEscrowDispute}
-                onResolve={handleResolveDisputeFromModal}
                 onRefreshList={fetchData}
               />
             </>

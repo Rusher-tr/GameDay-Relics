@@ -42,7 +42,7 @@ export default function PaymentSuccessPage() {
         console.error('Error data:', err?.response?.data);
         console.error('Full URL attempted:', `${import.meta.env.VITE_API_URL}/payment/success?session_id=${sessionId}`);
 
-        const errorMsg = err?.response?.data?.message || err?.message || 'Failed to verify payment';
+        const errorMsg = err?.userMessage || err?.response?.data?.message || err?.message || 'Failed to verify payment';
         setError(`Payment verification failed: ${errorMsg}. Check console for details.`);
       } finally {
         setLoading(false);

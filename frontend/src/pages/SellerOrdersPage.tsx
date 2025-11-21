@@ -5,7 +5,8 @@ import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Product } from '../types';
 import PaymentSettings from '../components/PaymentSettings';
-
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 interface Order {
   _id: string;
   productId: Product | null;
@@ -103,7 +104,7 @@ export default function SellerOrdersPage() {
   const handleConfirmShipping = async (orderId: string) => {
     const shipping = selectedShipping[orderId];
     if (!shipping || !shipping.provider || !shipping.trackingNumber) {
-      alert('Please select a delivery provider and enter a tracking number');
+      toast.error('Please select a delivery provider and enter a tracking number');
       return;
     }
 
@@ -125,11 +126,11 @@ export default function SellerOrdersPage() {
         delete updated[orderId];
         return updated;
       });
+      toast.success('Shipping provider confirmed successfully!');
 
-      alert('Shipping provider confirmed successfully!');
     } catch (err: any) {
       console.error('Error confirming shipping:', err);
-      alert(err?.response?.data?.message || 'Failed to confirm shipping');
+      toast.error(err?.response?.data?.message || 'Failed to confirm shipping');
     } finally {
       setSubmittingShipping(null);
     }

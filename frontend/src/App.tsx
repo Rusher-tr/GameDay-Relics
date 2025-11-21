@@ -21,13 +21,17 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentCancelledPage from './pages/PaymentCancelledPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import SellerOrdersPage from './pages/SellerOrdersPage';
 import ListProductPage from './pages/ListProductPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ShopPage from './pages/ShopPage';
+import LoginPage from './pages/LoginPage';
 import api from './lib/api';
 import { Product } from './types';
+import {ToastContainer} from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -97,11 +101,13 @@ function AppContent() {
             </>
           }
         />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/product/:productId" element={<ProductDetailPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
         <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/payment-cancelled" element={<PaymentCancelledPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/seller-orders" element={<SellerOrdersPage />} />
         <Route path="/list-product" element={<ListProductPage />} />
@@ -154,6 +160,18 @@ function App() {
         <CartProvider>
           <NotificationProvider>
             <NotificationContainer />
+            {/* ADD THIS */}
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              pauseOnHover
+              draggable
+              theme="light"
+              aria-label={"toast-container"}
+            />
             <AppContent />
           </NotificationProvider>
         </CartProvider>
