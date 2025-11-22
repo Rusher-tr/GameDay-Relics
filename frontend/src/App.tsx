@@ -25,13 +25,17 @@ import PaymentCancelledPage from './pages/PaymentCancelledPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import SellerOrdersPage from './pages/SellerOrdersPage';
 import ListProductPage from './pages/ListProductPage';
+import SellerProductsPage from './pages/SellerProductsPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ShopPage from './pages/ShopPage';
 import LoginPage from './pages/LoginPage';
 import api from './lib/api';
 import { Product } from './types';
-import {ToastContainer} from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { LoadingProvider } from './contexts/LoadingContext';
+import GlobalLoadingAnimation from './components/GlobalLoadingAnimation';
+import LoadingTransition from './components/LoadingTransition';
 
 function AppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -110,6 +114,7 @@ function AppContent() {
         <Route path="/payment-cancelled" element={<PaymentCancelledPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/seller-orders" element={<SellerOrdersPage />} />
+        <Route path="/seller-products" element={<SellerProductsPage />} />
         <Route path="/list-product" element={<ListProductPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
       </Routes>
@@ -156,26 +161,30 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <NotificationProvider>
-            <NotificationContainer />
-            {/* ADD THIS */}
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              pauseOnHover
-              draggable
-              theme="light"
-              aria-label={"toast-container"}
-            />
-            <AppContent />
-          </NotificationProvider>
-        </CartProvider>
-      </AuthProvider>
+      <LoadingTransition />
+      <LoadingProvider>
+        <GlobalLoadingAnimation />
+        <AuthProvider>
+          <CartProvider>
+            <NotificationProvider>
+              <NotificationContainer />
+              {/* ADD THIS */}
+              <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                pauseOnHover
+                draggable
+                theme="light"
+                aria-label={"toast-container"}
+              />
+              <AppContent />
+            </NotificationProvider>
+          </CartProvider>
+        </AuthProvider>
+      </LoadingProvider>
     </BrowserRouter>
   );
 }

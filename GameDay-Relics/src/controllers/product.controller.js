@@ -3,26 +3,26 @@ import { APIError } from "../utils/Apierror.js";
 import { Product } from "../models/product.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Verification } from "../models/verification.models.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { Auditlog } from "../models/auditlog.models.js";
+import { Order } from "../models/order.models.js";
 
 // working 
 const getAllProducts = asyncHandler(async (req, res) => {
-  // get page number from query (default = 1)
+
   const page = parseInt(req.query.page) || 1;
-  const limit = 40; // number of products per page
+  const limit = 40;
   const skip = (page - 1) * limit;
 
-  // find products with pagination
   const products = await Product.find({})
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: -1 }); // optional: newest first
+    .sort({ createdAt: -1 });
 
-  // total product count
+
   const totalProducts = await Product.countDocuments();
 
-  // total pages
+
   const totalPages = Math.ceil(totalProducts / limit);
 
   return res.status(200).json(
@@ -38,7 +38,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   );
 });
 
-// working - search products by query
+
 const searchProducts = asyncHandler(async (req, res) => {
   const { query } = req.query;
 
@@ -46,11 +46,11 @@ const searchProducts = asyncHandler(async (req, res) => {
     throw new APIError(400, "Please provide a search query")
   }
 
-  // Advanced search: search by title or description (case-insensitive)
+
   const products = await Product.find({
     $or: [
-      { title: { $regex: query, $options: "i" } }, 
-      { description: { $regex: query, $options: "i" } } 
+      { title: { $regex: query, $options: "i" } },
+      { description: { $regex: query, $options: "i" } }
     ]
   });
 
@@ -87,18 +87,18 @@ const getSingleProduct = asyncHandler(async (req, res) => {
   );
 });
 
-//  working on image upload part || no payment gateway part yet
+//  working on image upload part
 const createProduct = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
 
   const { title, description, price, condition, verificationId } = req.body;
 
-  // validate sellerId
+
   if (!sellerId) {
     throw new APIError(400, "SellerId Authentication Error");
   }
 
-  // validate data
+
   if (
     [title, description, price, condition].some(
       (field) => field?.trim() === "",
@@ -107,7 +107,7 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "All fields are required");
   }
 
-  // Validate images
+
   if (!req.files || req.files.length === 0) {
     throw new APIError(400, "At least one product image is required");
   }
@@ -116,8 +116,8 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Maximum 12 images are allowed");
   }
 
-  // Debug: Log file information
-  console.log("📁 Received files:", req.files.length);
+
+  console.log("Received files:", req.files.length);
   req.files.forEach((file, index) => {
     console.log(`File ${index + 1}:`, {
       originalname: file.originalname,
@@ -127,14 +127,14 @@ const createProduct = asyncHandler(async (req, res) => {
     });
   });
 
-  // Upload images to cloudinary
+
   const imageUploadPromises = req.files.map(file => uploadOnCloudinary(file.path));
   const uploadedImages = await Promise.all(imageUploadPromises);
 
-  // Filter out any failed uploads and get the URLs
+
   const images = uploadedImages
-  .filter(img => img !== null)
-  .map(img => img.url); // Only store the URLs
+    .filter(img => img !== null)
+    .map(img => img.url);
 
   if (images.length === 0) {
     throw new APIError(400, "Failed to upload images");
@@ -150,7 +150,7 @@ const createProduct = asyncHandler(async (req, res) => {
     verified: !!verificationId,
     verificationId: verificationId || null,
   });
-  
+
   if (!newProduct) {
     throw new APIError(500, "Something went wrong in product creation");
   }
@@ -205,34 +205,64 @@ const updateProduct = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedProduct, "Product updated successfully"))
 });
 
-// Working
+// Enhanced deletion with order validation
 const deleteProduct = asyncHandler(async (req, res) => {
-  const sellerId = req.user._id;
+  const userId = req.user._id;
+  const userRole = req.user.role;
   const productId = req.params.id;
 
-  if (!sellerId) {
-    throw new APIError(400, "SellerId Authentication Error");
+  if (!userId) {
+    throw new APIError(400, "Authentication Error");
   }
   if (!productId) {
-    throw new APIError(400, "Product ID error")
+    throw new APIError(400, "Product ID is required");
   }
-  // //___________________________
-  const deletedProduct = await Product.findByIdAndDelete(productId);
-  if(!deleteProduct){
-    throw new APIError(400,"Product Deletion Failed, Retry")
-  }
-  const auditl = await Auditlog.create({
-    amount: createdOrder.amount,
-    sellerId: sellerId,
-    action: "Product Deleted",
-  })
-  if(!auditl){
-      throw new APIError(400,"Audits Issue Caused in Product Deletion")
-  }
-  return res.
-    status(200)
-    .json(new ApiResponse(200, null, "Product deleted successfully"))
 
+  // Find the product first to verify ownership
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new APIError(404, "Product not found");
+  }
+
+  // Authorization check: Seller can only delete their own products, Admin can delete any
+  if (userRole === "seller" && product.sellerId.toString() !== userId.toString()) {
+    throw new APIError(403, "You can only delete your own products");
+  }
+
+  // Check if product is in orders that block deletion
+  const blockedOrderStatuses = ["Escrow", "shipped", "Disputed"];
+
+  const blockedOrder = await Order.findOne({
+    productId: productId,
+    status: { $in: blockedOrderStatuses }
+  });
+
+  if (blockedOrder) {
+    throw new APIError(
+      409,
+      `Cannot delete product - it has an order with status "${blockedOrder.status}". Products in Escrow, Shipped, or Disputed orders cannot be deleted. Only products in Pending, Held, Completed, or Refunded status can be deleted.`
+    );
+  }
+
+  const deletedProduct = await Product.findByIdAndDelete(productId);
+  if (!deletedProduct) {
+    throw new APIError(500, "Product deletion failed, please retry");
+  }
+
+
+  const auditl = await Auditlog.create({
+    amount: deletedProduct.price || 0,
+    sellerId: userRole === "admin" ? product.sellerId : userId,
+    action: `Product Deleted: ${deletedProduct.title} (by ${userRole})`,
+  });
+
+  if (!auditl) {
+    console.warn("Audit log creation failed for product deletion");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { deletedProduct }, "Product deleted successfully"));
 });
 
 
@@ -242,7 +272,7 @@ const verifiyProduct = asyncHandler(async (req, res) => {
   const userRole = req.user.role;
   const { verificationby, certificationId, certificationURL } = req.body;
 
-  // Validate required fields
+
   if (!certificationId || !certificationId.trim()) {
     throw new APIError(400, "Certification ID is required");
   }
@@ -259,23 +289,21 @@ const verifiyProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Product ID is required");
   }
 
-  // Check if product exists
+
   const product = await Product.findById(productId);
   if (!product) {
     throw new APIError(404, "Product not found");
   }
 
-  // If user is seller (not admin), verify they own the product
+
   if (userRole === "seller" && product.sellerId.toString() !== userId.toString()) {
     throw new APIError(403, "You can only verify your own products");
   }
 
-  // Check if product is already verified (verified flag is true)
   if (product.verified === true) {
     throw new APIError(400, "Product is already verified");
   }
 
-  // Create verification record
   try {
     const verification = await Verification.create({
       productId: productId,
@@ -286,11 +314,9 @@ const verifiyProduct = asyncHandler(async (req, res) => {
       verifiedAt: new Date()
     });
 
-    if (!verification) { 
+    if (!verification) {
       throw new APIError(500, "Something went wrong in verification creation");
     }
-
-    // Update product: set verified = true and save verificationId reference
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
       {
@@ -313,11 +339,9 @@ const verifiyProduct = asyncHandler(async (req, res) => {
       }, "Product verified successfully")
     );
   } catch (error) {
-    // If it's already an APIError, re-throw it
     if (error instanceof APIError) {
       throw error;
     }
-    // Otherwise, wrap it in an APIError with proper message
     console.error("Verification creation error:", error);
     throw new APIError(500, `Verification failed: ${error.message || "Unknown error"}`);
   }

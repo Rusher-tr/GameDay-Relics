@@ -6,38 +6,13 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
-  // get user details
   const {  email, username, password , role } = req.body;
-  //console.log(email)
-
-  // validate data
-
-  // bellow given will check if any one of the fields provided is null or not by some method
-  // this some method will take arguments and check each element in array and returns T/F
-
-  // if (
-  //   [email, username, password, role].some((field) => field?.trim() === "")
-  // ) {
-  //   throw new APIError(400, "All fields are required");
-  // }
-
-  // // existing user check
-
-  // const existedUser = await User.findOne({
-  //   $or: [{ username }, { email } ,{ role }],
-  // });
-
-  // check required fields only
   if ([email, username, password].some((field) => !field || field.trim() === "")) {
     throw new APIError(400, "Email, username, and password are required");
   }
-
-  // optional role validation — only if it's provided
   if (role && role.trim() === "") {
     throw new APIError(400, "Role cannot be empty if provided");
   }
-
-  // check if user already exists
   const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
@@ -47,32 +22,19 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new APIError(409, "email or username already exists");
   }
 
-  // create user object and create mongo entry
-
   const user = await User.create({
     email,
     password,
     username,
-    role, // by default role is buyer
+    role,
   });
-
-  // remove password and refresh token field from response
-
-  // we dont want to give response of password and refresh token to frontend so
-  // we use select method to filter out those items when validating if user is created
-  // or not in DB by user id
 
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
-
-  // check if the user is created or not
-
   if (!createdUser) {
     throw new APIError(500, "Something Went wrong in user registration");
   }
-
-  // return response else return error
 
   return res
     .status(201)
@@ -129,8 +91,6 @@ const loginUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
   const options = {
-    // to make it only server configureable
-    // cuz by default anyone can modify it from frontend
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax", 
@@ -165,20 +125,8 @@ const logoutUser = asyncHandler(async (req, res) => {
       new: true,
     }
   );
-  // await User.findByIdAndUpdate(
-  //     {
-  //         $set:{
-  //             refreshToken : undefined
-  //         }
-  //     },
-  //     {
-  //         new: true
-  //     }
-  // )
-
+  
   const options = {
-    // to make it only server configureable
-    // cuz by default anyone can modify it from frontend
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -200,7 +148,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   try {
-    // here refresh token's secret key is accessed
     const decodedToken = jwt.verify(
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
@@ -216,11 +163,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new APIError(401, "Refresh Token is expired");
     }
     const options = {
-      // to make it only server configureable
-      // cuz by default anyone can modify it from frontend
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // Important for crosssite cookie handling
+      sameSite: "lax", 
     };
     const { accessToken, refreshToken } =
       await generateAccessandRefreshTokens(user._id);
@@ -260,7 +205,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  // If user is not authenticated, return null
+  
   if (!req.user) {
     return res
       .status(200)
@@ -297,7 +242,6 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User Information Updated Successfully"));
 });
 
-// Update seller payment settings
 const updatePaymentSettings = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { paymentGateway, accountNumber, accountName, stripeAccountId } = req.body;
@@ -310,8 +254,7 @@ const updatePaymentSettings = asyncHandler(async (req, res) => {
   if (!user || user.role !== "seller") {
     throw new APIError(403, "Only sellers can update payment settings");
   }
-
-  // Validate payment gateway
+  
   const validGateways = ["nayapay", "easypaisa", "jazzcash", "stripe"];
   if (paymentGateway && !validGateways.includes(paymentGateway)) {
     throw new APIError(400, "Invalid payment gateway. Must be one of: nayapay, easypaisa, jazzcash, stripe");

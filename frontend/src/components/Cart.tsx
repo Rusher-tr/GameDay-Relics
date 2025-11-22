@@ -49,7 +49,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item._id}
                     className="flex space-x-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-amber-300 transition-colors"
                   >
                     <img
@@ -69,7 +69,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                           Qty: <span className="text-slate-900 font-bold">{item.quantity}</span>
                         </div>
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item._id)}
                           className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
                         >
                           <Trash2 className="h-5 w-5" />

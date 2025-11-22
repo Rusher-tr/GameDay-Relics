@@ -205,7 +205,7 @@ const solveDispute = asyncHandler(async (req, res) => {
 
 });
 
-// working--haven't tested the pending order condition
+
 const removeProduct = asyncHandler(async(req,res)=>{
   const adminId = req.user._id
   const productId = req.params.id

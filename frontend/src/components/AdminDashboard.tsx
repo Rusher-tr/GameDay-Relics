@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Order, Dispute, EscrowPayment } from '../types';
 import api from '../lib/api';
 import DisputeDetailsModal from './DisputeDetailsModal';
-import {toast} from "react-toastify"
+import { toast } from "react-toastify"
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -134,14 +134,21 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         }
 
         toast.success(
-          `Escrow Released Successfully!\n\n` +
-          `SELLER PAYMENT INFORMATION:\n` +
-          `Seller: ${paymentInfo.sellerName} (${paymentInfo.sellerEmail})\n` +
-          `Amount: $${paymentInfo.amount.toLocaleString()}\n` +
-          `Payment Gateway: ${gateway.toUpperCase()}\n` +
-          `${details}\n\n` +
-          `Please process the payment manually using the above details.`
+          `✅ Escrow Released! Payment of $${paymentInfo.amount.toLocaleString()} ready for ${paymentInfo.sellerName}`,
+          {
+            position: 'top-right',
+            autoClose: 6000,
+            hideProgressBar: false,
+          }
         );
+
+        // Log payment details to console for admin reference
+        console.log('SELLER PAYMENT INFORMATION:', {
+          seller: `${paymentInfo.sellerName} (${paymentInfo.sellerEmail})`,
+          amount: `$${paymentInfo.amount.toLocaleString()}`,
+          gateway: gateway.toUpperCase(),
+          details: details
+        });
       }
 
       fetchData();
@@ -187,7 +194,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
       const response = await api.post(`/admins/disputes/${disputeId}/release-escrow`, {
         resolution
       });
-      
+
       const paymentInfo = response.data.data?.sellerPaymentInfo;
       if (paymentInfo) {
         const gateway = paymentInfo.paymentGateway;
@@ -200,16 +207,23 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         }
 
         toast.success(
-          `Dispute Resolved - Escrow Released!\n\n` +
-          `SELLER PAYMENT INFORMATION:\n` +
-          `Seller: ${paymentInfo.sellerName} (${paymentInfo.sellerEmail})\n` +
-          `Amount: $${paymentInfo.amount?.toLocaleString()}\n` +
-          `Payment Gateway: ${gateway.toUpperCase()}\n` +
-          `${details}\n\n` +
-          `Please process the payment manually using the above details.`
+          `✅ Dispute Resolved! Escrow of $${paymentInfo.amount?.toLocaleString()} released to seller`,
+          {
+            position: 'top-right',
+            autoClose: 6000,
+            hideProgressBar: false,
+          }
         );
+
+        // Log payment details to console for admin reference
+        console.log('DISPUTE RESOLVED - SELLER PAYMENT INFO:', {
+          seller: `${paymentInfo.sellerName} (${paymentInfo.sellerEmail})`,
+          amount: `$${paymentInfo.amount?.toLocaleString()}`,
+          gateway: gateway.toUpperCase(),
+          details: details
+        });
       }
-      
+
       setSelectedDisputeForModal(null);
       fetchData();
     } catch (err: any) {
@@ -276,55 +290,50 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
           <div className="flex overflow-x-auto">
             <button
               onClick={() => setTab('escrow')}
-              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                tab === 'escrow'
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'escrow'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-slate-700 hover:text-amber-600'
-              }`}
+                }`}
             >
               <DollarSign className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Escrow</span>
             </button>
             <button
               onClick={() => setTab('disputes')}
-              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                tab === 'disputes'
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'disputes'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-slate-700 hover:text-amber-600'
-              }`}
+                }`}
             >
               <AlertCircle className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Disputes</span>
             </button>
             <button
               onClick={() => setTab('users')}
-              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                tab === 'users'
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'users'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-slate-700 hover:text-amber-600'
-              }`}
+                }`}
             >
               <Users className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Users</span>
             </button>
             <button
               onClick={() => setTab('orders')}
-              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                tab === 'orders'
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'orders'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-slate-700 hover:text-amber-600'
-              }`}
+                }`}
             >
               <Package className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Orders</span>
             </button>
             <button
               onClick={() => setTab('stats')}
-              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${
-                tab === 'stats'
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'stats'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-slate-700 hover:text-amber-600'
-              }`}
+                }`}
             >
               <TrendingUp className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Stats</span>
@@ -366,19 +375,18 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                     <div className="mb-4 pb-3 border-b border-slate-200">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-slate-700">Buyer Feedback:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          escrow.buyerSatisfaction === 'satisfied'
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${escrow.buyerSatisfaction === 'satisfied'
                             ? 'bg-green-100 text-green-800 border border-green-300'
                             : escrow.buyerSatisfaction === 'fine'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                            : escrow.buyerSatisfaction === 'disputed'
-                            ? 'bg-red-100 text-red-800 border border-red-300'
-                            : 'bg-gray-100 text-gray-800 border border-gray-300'
-                        }`}>
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : escrow.buyerSatisfaction === 'disputed'
+                                ? 'bg-red-100 text-red-800 border border-red-300'
+                                : 'bg-gray-100 text-gray-800 border border-gray-300'
+                          }`}>
                           {escrow.buyerSatisfaction === 'satisfied' ? '😊 Satisfied - Can Release' :
-                           escrow.buyerSatisfaction === 'fine' ? '👍 Fine' :
-                           escrow.buyerSatisfaction === 'disputed' ? '⚠️ Disputed' :
-                           '⏳ Pending Response'}
+                            escrow.buyerSatisfaction === 'fine' ? '👍 Fine' :
+                              escrow.buyerSatisfaction === 'disputed' ? '⚠️ Disputed' :
+                                '⏳ Pending Response'}
                         </span>
                       </div>
                     </div>
@@ -454,13 +462,12 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <p className="font-bold text-slate-900">{user.username}</p>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            user.role === 'admin'
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${user.role === 'admin'
                               ? 'bg-red-100 text-red-800 border border-red-300'
                               : user.role === 'seller'
-                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                              : 'bg-green-100 text-green-800 border border-green-300'
-                          }`}>
+                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                : 'bg-green-100 text-green-800 border border-green-300'
+                            }`}>
                             {user.role?.toUpperCase() || 'UNKNOWN'}
                           </span>
                         </div>
@@ -521,22 +528,20 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                            order.status === 'Completed'
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${order.status === 'Completed'
                               ? 'bg-green-100 text-green-800 border-green-300'
                               : order.status === 'Disputed'
-                              ? 'bg-red-100 text-red-800 border-red-300'
-                              : order.status === 'Refunded'
-                              ? 'bg-gray-100 text-gray-800 border-gray-300'
-                              : 'bg-blue-100 text-blue-800 border-blue-300'
-                          }`}>
+                                ? 'bg-red-100 text-red-800 border-red-300'
+                                : order.status === 'Refunded'
+                                  ? 'bg-gray-100 text-gray-800 border-gray-300'
+                                  : 'bg-blue-100 text-blue-800 border-blue-300'
+                            }`}>
                             {order.status}
                           </span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            order.escrowRelease
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${order.escrowRelease
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                            }`}>
                             {order.escrowRelease ? 'Released' : 'Held'}
                           </span>
                         </div>

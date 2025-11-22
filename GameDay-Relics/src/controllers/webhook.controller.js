@@ -1,4 +1,3 @@
-// controllers/webhook.controller.js
 import { stripe } from "../utils/stripe.js";
 import { Order } from "../models/order.models.js";
 
@@ -17,7 +16,7 @@ export const stripeWebhook = async (req, res) => {
     const orderId = session.metadata.orderId;
 
     await Order.findByIdAndUpdate(orderId, {
-      status: "Escrow", // mark as paid / held
+      status: "Escrow", 
     });
   }
 

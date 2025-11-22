@@ -16,10 +16,8 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
   if (!item) throw new APIError(400, "No product linked to order");
 
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-  // Ensure minimum Stripe amount (50 cents USD)
   const priceInCents = Math.round(item.price * 100);
-  const minimumAmount = 50; // 50 cents minimum for USD
+  const minimumAmount = 50;
   const finalAmount = Math.max(priceInCents, minimumAmount);
 
   const session = await stripe.checkout.sessions.create({
@@ -28,7 +26,7 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
     line_items: [
       {
         price_data: {
-          currency: "usd", // Changed from "pkr" to "usd" to avoid conversion issues
+          currency: "pkr", 
           product_data: {
             name: item.title || "Item",
             description: item.description || "",
@@ -48,21 +46,17 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
   order.transactionId = session.id;
   await order.save();
 
-  // Return the session to frontend
   return session;
 };
-
-// Handle payment cancellation - delete the pending order
 export const handlePaymentCancel = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
-  
+
   if (!buyerId) {
     throw new APIError(400, "Buyer ID is required");
   }
 
   console.log(`[Payment Cancel] Processing cancellation for buyer: ${buyerId}`);
 
-  // Find ALL pending orders for this buyer and delete them
   const pendingOrders = await Order.find({
     buyerId,
     status: "pending"
@@ -74,8 +68,6 @@ export const handlePaymentCancel = asyncHandler(async (req, res) => {
     console.log(`[Payment Cancel] No pending orders to cancel`);
     return res.status(200).json(new ApiResponse(200, "No pending order to cancel", null));
   }
-
-  // Delete all pending orders for this buyer
   const deleteResult = await Order.deleteMany({
     buyerId,
     status: "pending"
@@ -83,7 +75,7 @@ export const handlePaymentCancel = asyncHandler(async (req, res) => {
 
   console.log(`[Payment Cancel] Deleted ${deleteResult.deletedCount} order(s)`);
 
-  res.status(200).json(new ApiResponse(200, `Payment cancelled and ${deleteResult.deletedCount} order(s) removed`, { 
+  res.status(200).json(new ApiResponse(200, `Payment cancelled and ${deleteResult.deletedCount} order(s) removed`, {
     deletedCount: deleteResult.deletedCount,
     orderIds: pendingOrders.map(o => o._id.toString())
   }));

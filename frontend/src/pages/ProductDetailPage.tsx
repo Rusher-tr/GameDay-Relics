@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Shield, Package, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Shield, Package, ShoppingCart, ArrowLeft, Trash2 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../contexts/CartContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
 import api from '../lib/api';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
@@ -15,12 +17,16 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasPendingOrder, setHasPendingOrder] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { addToCart } = useCart();
   const { addNotification } = useNotification();
   const { user } = useAuth();
 
   const isSeller = user?.role === 'seller';
+  const isAdmin = user?.role === 'admin';
   const canAddToCart = !isSeller && !hasPendingOrder;
+  const sellerId = product?.sellerId && typeof product.sellerId === 'object' ? product.sellerId._id : product?.sellerId;
+  const canDeleteProduct = user && product && (isAdmin || (isSeller && sellerId === user._id));
   const shouldRefresh = searchParams.get('refresh') === 'true';
 
   useEffect(() => {
@@ -62,14 +68,14 @@ export default function ProductDetailPage() {
 
         // Define what statuses are considered "active/pending" (blocking repurchase)
         const activePendingStatuses = ['pending', 'Escrow', 'Held', 'shipped', 'Disputed'];
-        
+
         // Check if there's any ACTIVE order for this product
         // Completed and Refunded orders should NOT block repurchasing
         const pendingOrder = orders.find((order: any) => {
           const orderProductId = order.productId?._id || order.productId;
           const isMatchingProduct = orderProductId === productId;
           const isActiveOrder = activePendingStatuses.includes(order.status);
-          
+
           if (isMatchingProduct) {
             console.log('[ProductDetail] Found order for this product:', {
               orderId: order._id,
@@ -77,7 +83,7 @@ export default function ProductDetailPage() {
               isActive: isActiveOrder
             });
           }
-          
+
           return isMatchingProduct && isActiveOrder;
         });
 
@@ -142,6 +148,34 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleDeleteProduct = () => {
+    setConfirmDelete(true);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!product) return;
+
+    try {
+      await api.delete(`/products/delete/${product._id}`);
+      toast.success(`✅ Product "${product.title}" deleted successfully`, {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+      setConfirmDelete(false);
+      setTimeout(() => navigate('/shop'), 1000);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete product';
+      console.error('[ProductDetail] Delete error:', error);
+      toast.error(errorMessage, {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+      setConfirmDelete(false);
+    }
+  };
+
+
+
   return (
     <div className="min-h-screen bg-white">
       {/* Back Button */}
@@ -184,11 +218,10 @@ export default function ProductDetailPage() {
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-amber-400 ${
-                        selectedImage === index
-                          ? 'border-amber-600 shadow-md ring-2 ring-amber-200'
-                          : 'border-slate-300'
-                      }`}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-amber-400 ${selectedImage === index
+                        ? 'border-amber-600 shadow-md ring-2 ring-amber-200'
+                        : 'border-slate-300'
+                        }`}
                     >
                       <img src={image} alt={`${product.title} ${index + 1}`} className="w-full h-full object-cover" />
                     </button>
@@ -283,11 +316,33 @@ export default function ProductDetailPage() {
                 >
                   Continue Shopping
                 </button>
+
+                {canDeleteProduct && (
+                  <button
+                    onClick={handleDeleteProduct}
+                    className="w-full mt-3 bg-red-50 hover:bg-red-100 text-red-700 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 border border-red-200"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    <span>Delete Product</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={confirmDeleteProduct}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${product.title}"?\n\nNote: Products in Escrow, Shipped, or Disputed orders cannot be deleted.`}
+        confirmText="Delete Product"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }
