@@ -5,8 +5,6 @@ import { User } from "../models/user.models.js"
 
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
-    // If access token is not given then if user uses custom header, mainly it comes as Authorization
-    // if thats there then replace it with Bearer cuz that or access token's cookie is needed here  
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
         if (!token) {
@@ -47,7 +45,6 @@ export const optionalVerifyJWT = asyncHandler(async (req, _, next) => {
         next()
     }
     catch (err) {
-        // If token is invalid, just set user to null and continue
         req.user = null;
         next()
     }

@@ -279,7 +279,7 @@ export default function Navbar({ onCartClick, onAuthClick, onAdminClick }: Navba
             >
               <User className="h-6 w-6" />
               <span className="hidden sm:inline font-medium">
-                {user ? 'Account' : 'Sign In'}
+                {user ? user.username : 'Sign In'}
               </span>
             </button>
 

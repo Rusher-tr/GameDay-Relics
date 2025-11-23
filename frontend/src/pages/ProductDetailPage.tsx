@@ -287,7 +287,7 @@ export default function ProductDetailPage() {
               <div className="mt-auto">
                 <div className="flex items-baseline justify-between mb-6 pb-6 border-b-2 border-slate-200">
                   <span className="text-5xl font-black text-amber-700">
-                    ${product.price.toLocaleString()}
+                    PKR {product.price.toLocaleString()}
                   </span>
                   <span className="text-sm text-slate-500">+ shipping</span>
                 </div>

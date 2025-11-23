@@ -15,8 +15,8 @@ const orderSchema = new Schema(
       ref: "User",
     },
     transactionId: {
-        type: String, 
-      },
+      type: String,
+    },
     status: {
       type: String,
       enum: [
@@ -24,9 +24,11 @@ const orderSchema = new Schema(
         "Escrow",
         "Held",
         "shipped",
+        "in_transit",
         "Completed",
         "Disputed",
         "Refunded",
+        "Cancelled",
       ],
       default: "pending",
     },
@@ -43,7 +45,6 @@ const orderSchema = new Schema(
       enum: ["pending", "satisfied", "fine", "disputed"],
       default: "pending",
     },
-    // Delivery Gateway Selection
     deliveryGatewayOptions: {
       type: [String],
       enum: ["DHL", "FedEx", "TCS", "Leopard", "M&P"],
@@ -59,6 +60,22 @@ const orderSchema = new Schema(
     },
     trackingNumber: {
       type: String,
+    },
+    sellerDeliveryConfirmed: {
+      type: Date,
+      default: null,
+    },
+    sellerConfirmationDeadline: {
+      type: Date,
+      default: null,
+    },
+    cancelledReason: {
+      type: String,
+      default: null,
+    },
+    autoSatisfactionDate: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

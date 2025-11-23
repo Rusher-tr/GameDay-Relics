@@ -85,7 +85,7 @@ export default function ShopPage() {
       // Search filter
       const searchLower = searchQuery.toLowerCase();
       if (searchQuery && !product.title.toLowerCase().includes(searchLower) &&
-          !product.description.toLowerCase().includes(searchLower)) {
+        !product.description.toLowerCase().includes(searchLower)) {
         return false;
       }
 
@@ -117,7 +117,7 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header with Background */}
-      <div 
+      <div
         className="relative w-full py-12 bg-cover bg-center"
         style={{
           backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("/hero-img.jpg")',
@@ -147,7 +147,7 @@ export default function ShopPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border rounded font-inter focus:outline-none"
-              style={{ 
+              style={{
                 borderColor: '#d4c9b9',
                 color: '#1c452a'
               }}
@@ -169,7 +169,7 @@ export default function ShopPage() {
                   style={{ color: '#1c452a' }}
                 >
                   <h3 className="font-georgia font-bold">Sort By</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-5 w-5 transition-transform ${expandedFilters.sort ? 'rotate-180' : ''}`}
                   />
                 </button>
@@ -178,7 +178,7 @@ export default function ShopPage() {
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="w-full px-3 py-2 border rounded font-inter focus:outline-none mt-2"
-                    style={{ 
+                    style={{
                       borderColor: '#d4c9b9',
                       color: '#1c452a'
                     }}
@@ -200,7 +200,7 @@ export default function ShopPage() {
                   style={{ color: '#1c452a' }}
                 >
                   <h3 className="font-georgia font-bold">Category</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-5 w-5 transition-transform ${expandedFilters.category ? 'rotate-180' : ''}`}
                   />
                 </button>
@@ -243,7 +243,7 @@ export default function ShopPage() {
                   style={{ color: '#1c452a' }}
                 >
                   <h3 className="font-georgia font-bold">Condition</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-5 w-5 transition-transform ${expandedFilters.condition ? 'rotate-180' : ''}`}
                   />
                 </button>
@@ -286,14 +286,14 @@ export default function ShopPage() {
                   style={{ color: '#1c452a' }}
                 >
                   <h3 className="font-georgia font-bold">Price Range</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-5 w-5 transition-transform ${expandedFilters.price ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {expandedFilters.price && (
                   <div className="space-y-3 mt-2">
                     <div>
-                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Min: ${(priceRange[0] / 1000).toFixed(0)}K</label>
+                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Min: PKR {(priceRange[0] / 1000).toFixed(0)}K</label>
                       <input
                         type="range"
                         min="0"
@@ -305,7 +305,7 @@ export default function ShopPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Max: ${(priceRange[1] / 1000).toFixed(0)}K</label>
+                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Max: PKR {(priceRange[1] / 1000).toFixed(0)}K</label>
                       <input
                         type="range"
                         min="0"
@@ -332,7 +332,7 @@ export default function ShopPage() {
                       setPriceRange([0, 300000]);
                     }}
                     className="w-full py-2 rounded font-semibold transition-all border font-inter"
-                    style={{ 
+                    style={{
                       backgroundColor: '#1c452a',
                       color: '#f2dec4',
                       borderColor: '#1c452a'
@@ -350,7 +350,7 @@ export default function ShopPage() {
             <button
               onClick={() => setShowMobileFilters(!showMobileFilters)}
               className="flex items-center space-x-2 bg-white border px-4 py-3 rounded w-full font-semibold font-inter"
-              style={{ 
+              style={{
                 borderColor: '#d4c9b9',
                 color: '#1c452a'
               }}
@@ -368,7 +368,7 @@ export default function ShopPage() {
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="w-full px-3 py-2 border rounded font-inter"
-                    style={{ 
+                    style={{
                       borderColor: '#d4c9b9',
                       color: '#1c452a'
                     }}
@@ -416,7 +416,7 @@ export default function ShopPage() {
                     setPriceRange([0, 300000]);
                   }}
                   className="px-6 py-2 rounded font-semibold transition-all font-inter border"
-                  style={{ 
+                  style={{
                     backgroundColor: '#1c452a',
                     color: '#f2dec4',
                     borderColor: '#1c452a'

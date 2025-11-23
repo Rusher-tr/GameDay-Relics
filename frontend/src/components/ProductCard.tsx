@@ -66,7 +66,7 @@ export default function ProductCard({ product, buyerOrders = [] }: ProductCardPr
 
         <div className="flex items-center justify-between">
           <span className="font-georgia text-2xl font-bold" style={{ color: '#1c452a' }}>
-            ${product.price.toLocaleString()}
+            PKR {product.price.toLocaleString()}
           </span>
           {canAddToCart && (
             <button

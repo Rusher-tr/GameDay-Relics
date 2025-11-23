@@ -267,7 +267,7 @@ export default function DisputeDetailsModal({
                   </div>
                   <div>
                     <p className="text-xs text-slate-600">Amount</p>
-                    <p className="text-sm font-semibold text-slate-900">${dispute.order.amount.toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-slate-900">PKR {dispute.order.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-600">Order Status</p>

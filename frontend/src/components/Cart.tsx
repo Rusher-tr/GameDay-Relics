@@ -62,7 +62,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                         {item.title}
                       </h3>
                       <p className="text-amber-700 font-bold mb-3">
-                        ${item.price.toLocaleString()}
+                        PKR {item.price.toLocaleString()}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600 font-medium">
@@ -84,7 +84,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-lg font-semibold text-slate-700">Total:</span>
                   <span className="text-3xl font-black text-amber-700">
-                    ${getTotal().toLocaleString()}
+                    PKR {getTotal().toLocaleString()}
                   </span>
                 </div>
                 <button

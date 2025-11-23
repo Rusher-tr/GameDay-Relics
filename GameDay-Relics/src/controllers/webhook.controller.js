@@ -15,8 +15,13 @@ export const stripeWebhook = async (req, res) => {
     const session = event.data.object;
     const orderId = session.metadata.orderId;
 
+    // Set seller confirmation deadline to 7 days from now
+    const confirmationDeadline = new Date();
+    confirmationDeadline.setDate(confirmationDeadline.getDate() + 7);
+
     await Order.findByIdAndUpdate(orderId, {
-      status: "Escrow", 
+      status: "Escrow",
+      sellerConfirmationDeadline: confirmationDeadline,
     });
   }
 

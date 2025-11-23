@@ -135,7 +135,7 @@ export default function PaymentCancelledPage() {
                     {product.title}
                   </h3>
                   <p className="text-lg font-bold text-amber-600">
-                    ${product.price.toLocaleString()}
+                    PKR {product.price.toLocaleString()}
                   </p>
                 </div>
               </div>

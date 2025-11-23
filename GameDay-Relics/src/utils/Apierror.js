@@ -9,8 +9,6 @@ class APIError extends Error {
     this.message = message;
     this.data = null;
     this.success = false;
-    // this.isOperational = true; // to differentiate between operational errors and programming errors/
-    // here its Api error so its operational error
     this.statusCode = statusCode;
     this.errors = errors;
     if (stack) {

@@ -55,11 +55,10 @@ export default function ProductDetail({ product, isOpen, onClose, onAddToCart }:
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        selectedImage === index
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedImage === index
                           ? 'border-amber-600 shadow-md'
                           : 'border-slate-200 hover:border-amber-400'
-                      }`}
+                        }`}
                     >
                       <img src={image} alt={`${product.title} ${index + 1}`} className="w-full h-full object-cover" />
                     </button>
@@ -119,7 +118,7 @@ export default function ProductDetail({ product, isOpen, onClose, onAddToCart }:
               <div className="mt-auto">
                 <div className="flex items-baseline justify-between mb-6">
                   <span className="text-5xl font-black text-amber-700">
-                    ${product.price.toLocaleString()}
+                    PKR {product.price.toLocaleString()}
                   </span>
                   <span className="text-sm text-slate-500">+ shipping</span>
                 </div>

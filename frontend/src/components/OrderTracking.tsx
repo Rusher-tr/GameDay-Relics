@@ -116,7 +116,7 @@ export default function OrderTracking({ isOpen, onClose, onRaiseDispute, onVerif
                         {getStatusIcon(order.status)}
                         <span>{getStatusLabel(order.status)}</span>
                       </span>
-                      <span className="text-2xl font-black text-amber-700">${order.price.toLocaleString()}</span>
+                      <span className="text-2xl font-black text-amber-700">PKR {order.price.toLocaleString()}</span>
                     </div>
                     <p className="text-sm text-slate-600">Order ID: {order.id.slice(0, 8)}</p>
                     <p className="text-xs text-slate-500 mt-1">
@@ -153,7 +153,7 @@ export default function OrderTracking({ isOpen, onClose, onRaiseDispute, onVerif
 
                       <div>
                         <p className="text-xs text-slate-500 uppercase font-semibold">Amount</p>
-                        <p className="text-lg font-black text-amber-700 mt-1">${order.price.toLocaleString()}</p>
+                        <p className="text-lg font-black text-amber-700 mt-1">PKR {order.price.toLocaleString()}</p>
                       </div>
                     </div>
 

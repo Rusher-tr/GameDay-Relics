@@ -71,6 +71,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       await signOut();
       onClose();
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -93,7 +94,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <div className="text-center">
               <h2 className="text-3xl font-black text-slate-900 mb-4">Welcome Back!</h2>
               <p className="text-slate-600 mb-2">Signed in as:</p>
-              <p className="text-lg font-semibold text-amber-700 mb-8">{user.email}</p>
+              <p className="text-lg font-semibold text-amber-700 mb-8">{user.username}</p>
               <button
                 onClick={handleSignOut}
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition-colors"
@@ -116,7 +117,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-3">
+              <form onSubmit={handleSubmit} className="space-y-3" autoComplete="off">
+                {/* Dummy inputs to trick browser autofill */}
+                <input type="text" style={{ display: 'none' }} />
+                <input type="password" style={{ display: 'none' }} />
+
                 {isSignUp && (
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -128,6 +133,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       onChange={(e) => setName(e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                       required
+                      autoComplete="off"
+                      name="new-name-field-random"
                     />
                   </div>
                 )}
@@ -177,6 +184,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                     required
+                    autoComplete="email"
+                    name="email"
                   />
                 </div>
 
@@ -190,6 +199,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                     required
+                    autoComplete="new-password"
+                    name="password"
+                    readOnly={true}
+                    onFocus={(e) => {
+                      e.target.readOnly = false;
+                    }}
                   />
                 </div>
 

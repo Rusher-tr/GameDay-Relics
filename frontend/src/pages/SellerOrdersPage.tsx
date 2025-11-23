@@ -17,13 +17,16 @@ interface Order {
   } | null;
   sellerId: string;
   transactionId: string | null;
-  status: 'pending' | 'Escrow' | 'Held' | 'shipped' | 'Completed' | 'Disputed' | 'Refunded';
+  status: 'pending' | 'Escrow' | 'Held' | 'shipped' | 'in_transit' | 'Completed' | 'Disputed' | 'Refunded' | 'Cancelled';
   amount: number;
   escrowRelease: boolean;
   deliveryGatewayOptions: string[];
   deliveryGatewaySelected: string | null;
   shippingProvider: string | null;
   trackingNumber: string | null;
+  sellerDeliveryConfirmed: string | null;
+  sellerConfirmationDeadline: string | null;
+  cancelledReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,6 +73,8 @@ export default function SellerOrdersPage() {
         return <Package className="h-5 w-5 text-blue-600" />;
       case 'shipped':
         return <Truck className="h-5 w-5 text-purple-600" />;
+      case 'in_transit':
+        return <Truck className="h-5 w-5 text-purple-600" />;
       case 'Completed':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'Disputed':
@@ -89,6 +94,8 @@ export default function SellerOrdersPage() {
       case 'Held':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'shipped':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'in_transit':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'Completed':
         return 'bg-green-100 text-green-800 border-green-300';
@@ -114,13 +121,13 @@ export default function SellerOrdersPage() {
         shippingProvider: shipping.provider,
         trackingNumber: shipping.trackingNumber
       });
-      
-      setOrders(orders.map(order => 
-        order._id === orderId 
+
+      setOrders(orders.map(order =>
+        order._id === orderId
           ? { ...order, shippingProvider: shipping.provider, trackingNumber: shipping.trackingNumber, status: 'shipped' }
           : order
       ));
-      
+
       setSelectedShipping(prev => {
         const updated = { ...prev };
         delete updated[orderId];
@@ -131,6 +138,26 @@ export default function SellerOrdersPage() {
     } catch (err: any) {
       console.error('Error confirming shipping:', err);
       toast.error(err?.response?.data?.message || 'Failed to confirm shipping');
+    } finally {
+      setSubmittingShipping(null);
+    }
+  };
+
+  const handleConfirmDelivery = async (orderId: string) => {
+    setSubmittingShipping(orderId);
+    try {
+      await api.post(`/orders/${orderId}/confirm-delivery`);
+
+      setOrders(orders.map(order =>
+        order._id === orderId
+          ? { ...order, status: 'in_transit', sellerDeliveryConfirmed: new Date().toISOString() }
+          : order
+      ));
+
+      toast.success('Delivery confirmed! Package is now in transit.');
+    } catch (err: any) {
+      console.error('Error confirming delivery:', err);
+      toast.error(err?.response?.data?.message || 'Failed to confirm delivery');
     } finally {
       setSubmittingShipping(null);
     }
@@ -247,7 +274,7 @@ export default function SellerOrdersPage() {
               <div>
                 <p className="text-sm text-slate-500 mb-1">Total Earnings</p>
                 <p className="text-3xl font-bold text-green-600" style={{ fontFamily: 'Georgia, serif' }}>
-                  ${totalEarnings.toLocaleString()}
+                  PKR {totalEarnings.toLocaleString()}
                 </p>
               </div>
               <div className="bg-green-100 rounded-full p-4">
@@ -261,7 +288,7 @@ export default function SellerOrdersPage() {
               <div>
                 <p className="text-sm text-slate-500 mb-1">Pending in Escrow</p>
                 <p className="text-3xl font-bold text-amber-600" style={{ fontFamily: 'Georgia, serif' }}>
-                  ${pendingEarnings.toLocaleString()}
+                  PKR {pendingEarnings.toLocaleString()}
                 </p>
               </div>
               <div className="bg-amber-100 rounded-full p-4">
@@ -325,7 +352,7 @@ export default function SellerOrdersPage() {
                     <div className="text-right">
                       <p className="text-sm text-slate-500 mb-1">Sale Amount</p>
                       <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Georgia, serif' }}>
-                        ${order.amount.toLocaleString()}
+                        PKR {order.amount.toLocaleString()}
                       </p>
                     </div>
 
@@ -345,11 +372,10 @@ export default function SellerOrdersPage() {
                       {order.escrowRelease !== undefined && (
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-slate-700">Escrow:</span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            order.escrowRelease
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${order.escrowRelease
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-amber-100 text-amber-800'
+                            }`}>
                             {order.escrowRelease ? 'Released' : 'Held'}
                           </span>
                         </div>
@@ -372,6 +398,30 @@ export default function SellerOrdersPage() {
                 {['Escrow', 'Held'].includes(order.status) && !order.shippingProvider && order.deliveryGatewayOptions && order.deliveryGatewayOptions.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <div className="space-y-4">
+                      {/* Deadline Warning */}
+                      {order.sellerConfirmationDeadline && (() => {
+                        const deadline = new Date(order.sellerConfirmationDeadline);
+                        const now = new Date();
+                        const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        return daysRemaining > 0 && daysRemaining <= 7 ? (
+                          <div className={`rounded-lg p-3 border ${daysRemaining <= 2
+                              ? 'bg-red-50 border-red-200'
+                              : daysRemaining <= 4
+                                ? 'bg-orange-50 border-orange-200'
+                                : 'bg-yellow-50 border-yellow-200'
+                            }`}>
+                            <p className={`text-sm font-semibold ${daysRemaining <= 2
+                                ? 'text-red-900'
+                                : daysRemaining <= 4
+                                  ? 'text-orange-900'
+                                  : 'text-yellow-900'
+                              }`}>
+                              ⚠️ Urgent: Confirm shipping within {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} or this order will be automatically cancelled!
+                            </p>
+                          </div>
+                        ) : null;
+                      })()}
+
                       <div>
                         <h4 className="font-semibold text-slate-900 mb-3">Select Delivery Gateway</h4>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
@@ -382,11 +432,10 @@ export default function SellerOrdersPage() {
                                 ...prev,
                                 [order._id]: { ...prev[order._id], provider }
                               }))}
-                              className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                                selectedShipping[order._id]?.provider === provider
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
-                              }`}
+                              className={`px-3 py-2 rounded-lg font-semibold text-sm transition-colors ${selectedShipping[order._id]?.provider === provider
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                                }`}
                             >
                               {provider}
                             </button>
@@ -428,6 +477,39 @@ export default function SellerOrdersPage() {
                         )}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Buyer Confirmation Status - Show when buyer has marked satisfaction */}
+                {order.status === 'in_transit' && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <Truck className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
+                        <div>
+                          <p className="font-semibold text-amber-900">Buyer Has Received Package</p>
+                          <p className="text-sm text-amber-700 mt-1">The buyer has marked their satisfaction. You can now confirm delivery to complete the order.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleConfirmDelivery(order._id)}
+                      disabled={submittingShipping === order._id}
+                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {submittingShipping === order._id ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span>Confirming...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Confirm Delivery - Complete Order</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>

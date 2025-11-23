@@ -5,71 +5,40 @@ import {
   createOrder,
   getOrderById,
   cancelOrder,
-  //updateOrder,
   raiseDispute,
   getOrdersByUser,
   getOrdersBySeller,
   markBuyerSatisfaction,
   selectDeliveryGateway,
   confirmShippingProvider,
-  //holdInEscrow,
-  releaseEscrow,
-  refundOrder,
-  //logOrderAction,
+  confirmDelivery,
+  processAutoSatisfaction,
+  processExpiredSellerConfirmations,
 } from "../controllers/order.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
+// Auto-satisfaction (for cron jobs/internal use) - MUST BE BEFORE /:id ROUTES
+router.post("/process-auto-satisfaction", processAutoSatisfaction);
+// Auto-cancel orders where seller didn't confirm within 7 days (for cron jobs/internal use)
+router.post("/process-expired-confirmations", processExpiredSellerConfirmations);
 
 // TESTED SUCCESS
-router.route("/:id/raise-dispute").post(verifyJWT,authorizeRoles("buyer"),upload.array("evidence",10),raiseDispute)
-
-
-// Buyer creates order
-// // TESTED PARTIAL SUCCESS
-// router.post("/", verifyJWT, authorizeRoles("buyer"), createOrder);
-
-
+router.route("/:id/raise-dispute").post(verifyJWT, authorizeRoles("buyer"), upload.array("evidence", 10), raiseDispute)
 router.post("/create", verifyJWT, authorizeRoles("buyer"), createOrder);
-
-
-// Buyer view own orders
-// TESTED SUCCESS
 router.get("/mine", verifyJWT, authorizeRoles("buyer"), getOrdersByUser);
-
-
-// Seller view orders for their products
-// TESTED SUCCESS
 router.get("/seller", verifyJWT, authorizeRoles("seller"), getOrdersBySeller);
 
-
-// Get single order if buyer/seller/admin
-
-router.get("/:id", verifyJWT, getOrderById); // controller checks ownership/role
-
+router.get("/:id", verifyJWT, getOrderById);
 // Cancel (buyer)
-
 // TESTED SUCCESS
 router.post("/:id/cancel", verifyJWT, authorizeRoles("buyer"), cancelOrder);
-
-// Mark buyer satisfaction
 router.post("/:id/satisfaction", verifyJWT, authorizeRoles("buyer"), markBuyerSatisfaction);
-
-// Delivery Gateway Selection (buyer during checkout)
 router.post("/:id/select-delivery", verifyJWT, authorizeRoles("buyer"), selectDeliveryGateway);
-
-// Shipping Provider Confirmation (seller after payment)
 router.post("/:id/confirm-shipping", verifyJWT, authorizeRoles("seller"), confirmShippingProvider);
-
-// Seller actions: hold/release escrow, update shipping
-
-     //router.post("/:id/hold", verifyJWT, authorizeRoles("seller"), holdInEscrow);
-
-router.post("/:id/release", verifyJWT, authorizeRoles("seller", "admin"), releaseEscrow);
-router.post("/:id/refund", verifyJWT, authorizeRoles("seller", "admin"), refundOrder);
+router.post("/:id/confirm-delivery", verifyJWT, authorizeRoles("seller"), confirmDelivery);
 
 // Disputes
 router.post("/:id/dispute", verifyJWT, authorizeRoles("buyer"), raiseDispute);
-
 export default router;

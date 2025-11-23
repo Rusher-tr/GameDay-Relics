@@ -3,7 +3,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { Order, Dispute, EscrowPayment } from '../types';
 import api from '../lib/api';
 import DisputeDetailsModal from './DisputeDetailsModal';
+import AuditLogsPage from '../pages/AuditLogsPage';
 import { toast } from "react-toastify"
+
+// Using AuditLogsPage in the component below
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -67,7 +70,10 @@ interface OrderStats {
 }
 
 export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps) {
-  const [tab, setTab] = useState<'escrow' | 'disputes' | 'users' | 'orders' | 'stats'>('escrow');
+  const [tab, setTab] = useState<'escrow' | 'disputes' | 'users' | 'orders' | 'stats' | 'auditlogs'>('escrow');
+  const [showAuditLogsPage, setShowAuditLogsPage] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(80); // Default width in percent
+  const [isDragging, setIsDragging] = useState(false);
   const [escrows, setEscrows] = useState<EscrowOrder[]>([]);
   const [disputes, setDisputes] = useState<(Dispute & { order?: Order })[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -82,6 +88,12 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    // Skip fetching if we're on the audit logs page
+    if (tab === 'auditlogs') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       if (tab === 'escrow') {
@@ -134,7 +146,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         }
 
         toast.success(
-          `✅ Escrow Released! Payment of $${paymentInfo.amount.toLocaleString()} ready for ${paymentInfo.sellerName}`,
+          `✅ Escrow Released! Payment of PKR ${paymentInfo.amount.toLocaleString()} ready for ${paymentInfo.sellerName}`,
           {
             position: 'top-right',
             autoClose: 6000,
@@ -145,7 +157,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         // Log payment details to console for admin reference
         console.log('SELLER PAYMENT INFORMATION:', {
           seller: `${paymentInfo.sellerName} (${paymentInfo.sellerEmail})`,
-          amount: `$${paymentInfo.amount.toLocaleString()}`,
+          amount: `PKR ${paymentInfo.amount.toLocaleString()}`,
           gateway: gateway.toUpperCase(),
           details: details
         });
@@ -207,7 +219,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         }
 
         toast.success(
-          `✅ Dispute Resolved! Escrow of $${paymentInfo.amount?.toLocaleString()} released to seller`,
+          ` Dispute Resolved! Escrow of PKR ${paymentInfo.amount?.toLocaleString()} released to seller`,
           {
             position: 'top-right',
             autoClose: 6000,
@@ -218,7 +230,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
         // Log payment details to console for admin reference
         console.log('DISPUTE RESOLVED - SELLER PAYMENT INFO:', {
           seller: `${paymentInfo.sellerName} (${paymentInfo.sellerEmail})`,
-          amount: `$${paymentInfo.amount?.toLocaleString()}`,
+          amount: `PKR ${paymentInfo.amount?.toLocaleString()}`,
           gateway: gateway.toUpperCase(),
           details: details
         });
@@ -266,14 +278,69 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     }
   };
 
+  // Add event listeners for drag functionality
+  // MUST be before early return to comply with React Hooks rules
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove as any);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove as any);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
+
   if (!isOpen) return null;
 
+  // Debug logging to diagnose blank screen issue
+  console.log('AdminDashboard render:', { isOpen, tab, showAuditLogsPage, loading, escrowsLength: escrows.length });
+
+  const handleMouseDown = () => {
+    setIsDragging(true);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const container = document.querySelector('.admin-panel-container') as HTMLElement;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    if (!rect) return;
+
+    // Calculate width based on window width and current mouse position
+    const windowWidth = window.innerWidth;
+    const distanceFromRight = windowWidth - e.clientX;
+    const newWidth = (distanceFromRight / windowWidth) * 100;
+
+    if (newWidth > 40 && newWidth < 95) {
+      setPanelWidth(newWidth);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden"
+    >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-2xl overflow-y-auto">
-        <div className="sticky top-0 p-6 border-b-2 border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 z-10 flex items-center justify-between">
+      <div
+        className="admin-panel-container absolute right-0 top-0 h-full bg-white shadow-2xl flex flex-col"
+        style={{ width: `${panelWidth}%` }}
+      >
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute left-0 top-0 h-full w-1 bg-amber-400 hover:bg-amber-600 cursor-col-resize transition-colors z-20"
+          title="Drag to resize panel width"
+        />
+
+        <div className="sticky top-0 p-6 pl-7 border-b-2 border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 z-10 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black text-slate-900">Admin Dashboard</h2>
             <p className="text-slate-600 text-sm mt-1">Manage escrow and disputes</p>
@@ -286,13 +353,13 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
           </button>
         </div>
 
-        <div className="border-b border-slate-200">
+        <div className="border-b border-slate-200 pl-1">
           <div className="flex overflow-x-auto">
             <button
               onClick={() => setTab('escrow')}
               className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'escrow'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-slate-700 hover:text-amber-600'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
                 }`}
             >
               <DollarSign className="h-4 w-4 inline mr-1" />
@@ -301,8 +368,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
             <button
               onClick={() => setTab('disputes')}
               className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'disputes'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-slate-700 hover:text-amber-600'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
                 }`}
             >
               <AlertCircle className="h-4 w-4 inline mr-1" />
@@ -311,8 +378,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
             <button
               onClick={() => setTab('users')}
               className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'users'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-slate-700 hover:text-amber-600'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
                 }`}
             >
               <Users className="h-4 w-4 inline mr-1" />
@@ -321,8 +388,8 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
             <button
               onClick={() => setTab('orders')}
               className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'orders'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-slate-700 hover:text-amber-600'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
                 }`}
             >
               <Package className="h-4 w-4 inline mr-1" />
@@ -331,18 +398,38 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
             <button
               onClick={() => setTab('stats')}
               className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'stats'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-slate-700 hover:text-amber-600'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
                 }`}
             >
               <TrendingUp className="h-4 w-4 inline mr-1" />
               <span className="text-sm">Stats</span>
             </button>
+            <button
+              onClick={() => {
+                setTab('auditlogs');
+                setShowAuditLogsPage(true);
+              }}
+              className={`flex-1 px-4 py-3 font-bold text-center border-b-2 transition-colors whitespace-nowrap ${tab === 'auditlogs'
+                ? 'border-amber-600 text-amber-600 bg-amber-50'
+                : 'border-transparent text-slate-700 hover:text-amber-600'
+                }`}
+            >
+              <Package className="h-4 w-4 inline mr-1" />
+              <span className="text-sm">Audit Logs</span>
+            </button>
           </div>
         </div>
 
-        <div className="p-6">
-          {loading ? (
+        <div className="p-6 pl-7 flex-1 overflow-y-auto">
+          {showAuditLogsPage || tab === 'auditlogs' ? (
+            <AuditLogsPage
+              onBack={() => {
+                setShowAuditLogsPage(false);
+                setTab('escrow');
+              }}
+            />
+          ) : loading ? (
             <div className="text-center py-12">
               <div className="animate-spin h-12 w-12 border-4 border-amber-200 border-t-amber-600 rounded-full mx-auto mb-4"></div>
               <p className="text-slate-600">Loading...</p>
@@ -359,7 +446,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                   <div key={escrow.id} className="border-2 border-slate-200 rounded-lg p-4 hover:border-amber-300 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="font-bold text-slate-900">Amount Held: ${escrow.amount.toLocaleString()}</p>
+                        <p className="font-bold text-slate-900">Amount Held: PKR {escrow.amount.toLocaleString()}</p>
                         <p className="text-sm text-slate-600">Order ID: {escrow.order_id.slice(0, 8)}</p>
                       </div>
                       <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold border border-yellow-300">
@@ -376,12 +463,12 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-slate-700">Buyer Feedback:</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${escrow.buyerSatisfaction === 'satisfied'
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : escrow.buyerSatisfaction === 'fine'
-                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                              : escrow.buyerSatisfaction === 'disputed'
-                                ? 'bg-red-100 text-red-800 border border-red-300'
-                                : 'bg-gray-100 text-gray-800 border border-gray-300'
+                          ? 'bg-green-100 text-green-800 border border-green-300'
+                          : escrow.buyerSatisfaction === 'fine'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                            : escrow.buyerSatisfaction === 'disputed'
+                              ? 'bg-red-100 text-red-800 border border-red-300'
+                              : 'bg-gray-100 text-gray-800 border border-gray-300'
                           }`}>
                           {escrow.buyerSatisfaction === 'satisfied' ? '😊 Satisfied - Can Release' :
                             escrow.buyerSatisfaction === 'fine' ? '👍 Fine' :
@@ -463,10 +550,10 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                         <div className="flex items-center gap-3 mb-2">
                           <p className="font-bold text-slate-900">{user.username}</p>
                           <span className={`px-2 py-1 rounded text-xs font-bold ${user.role === 'admin'
-                              ? 'bg-red-100 text-red-800 border border-red-300'
-                              : user.role === 'seller'
-                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                : 'bg-green-100 text-green-800 border border-green-300'
+                            ? 'bg-red-100 text-red-800 border border-red-300'
+                            : user.role === 'seller'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : 'bg-green-100 text-green-800 border border-green-300'
                             }`}>
                             {user.role?.toUpperCase() || 'UNKNOWN'}
                           </span>
@@ -524,23 +611,23 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                             <p className="text-sm text-slate-700 mt-1">{order.productId.title}</p>
                           )}
                           <p className="text-sm text-slate-600 mt-1">
-                            Amount: ${order.amount.toLocaleString()}
+                            Amount: PKR {order.amount.toLocaleString()}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold border ${order.status === 'Completed'
-                              ? 'bg-green-100 text-green-800 border-green-300'
-                              : order.status === 'Disputed'
-                                ? 'bg-red-100 text-red-800 border-red-300'
-                                : order.status === 'Refunded'
-                                  ? 'bg-gray-100 text-gray-800 border-gray-300'
-                                  : 'bg-blue-100 text-blue-800 border-blue-300'
+                            ? 'bg-green-100 text-green-800 border-green-300'
+                            : order.status === 'Disputed'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : order.status === 'Refunded'
+                                ? 'bg-gray-100 text-gray-800 border-gray-300'
+                                : 'bg-blue-100 text-blue-800 border-blue-300'
                             }`}>
                             {order.status}
                           </span>
                           <span className={`px-2 py-1 rounded text-xs font-bold ${order.escrowRelease
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
                             }`}>
                             {order.escrowRelease ? 'Released' : 'Held'}
                           </span>
@@ -614,7 +701,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <DollarSign className="h-5 w-5 text-green-600" />
                     </div>
                     <p className="text-3xl font-black text-green-700">
-                      ${stats.totalAmount.toLocaleString()}
+                      PKR {stats.totalAmount.toLocaleString()}
                     </p>
                   </div>
 
@@ -624,7 +711,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <TrendingUp className="h-5 w-5 text-blue-600" />
                     </div>
                     <p className="text-3xl font-black text-blue-700">
-                      ${stats.averageAmount.toLocaleString()}
+                      PKR {stats.averageAmount.toLocaleString()}
                     </p>
                   </div>
 
@@ -634,7 +721,7 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <Package className="h-5 w-5 text-amber-600" />
                     </div>
                     <p className="text-3xl font-black text-amber-700">
-                      ${stats.minAmount.toLocaleString()}
+                      PKR {stats.minAmount.toLocaleString()}
                     </p>
                   </div>
 
@@ -644,13 +731,19 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                       <CheckCircle className="h-5 w-5 text-purple-600" />
                     </div>
                     <p className="text-3xl font-black text-purple-700">
-                      ${stats.maxAmount.toLocaleString()}
+                      PKR {stats.maxAmount.toLocaleString()}
                     </p>
                   </div>
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <div className="text-center py-12">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-600 font-semibold">Unknown tab: {tab}</p>
+              <p className="text-sm text-slate-500 mt-2">Please refresh and try again</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

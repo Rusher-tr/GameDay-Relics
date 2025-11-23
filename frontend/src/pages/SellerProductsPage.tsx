@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Trash2, Package, DollarSign, Image as ImageIcon, Plus } from 'lucide-react';
+import { Trash2, Package, Image as ImageIcon, Plus } from 'lucide-react';
 import { Product } from '../types';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
@@ -168,9 +168,8 @@ export default function SellerProductsPage() {
 
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center space-x-2">
-                                                <DollarSign className="h-4 w-4 text-amber-600" />
                                                 <span className="text-2xl font-black text-amber-700">
-                                                    ${product.price.toLocaleString()}
+                                                    PKR {product.price.toLocaleString()}
                                                 </span>
                                             </div>
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${product.condition === 'Mint' ? 'bg-green-100 text-green-800 border-green-300' :

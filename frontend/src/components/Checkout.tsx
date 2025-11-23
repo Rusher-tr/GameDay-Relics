@@ -54,7 +54,7 @@ export default function Checkout({ isOpen, onClose, onSuccess }: CheckoutProps) 
       // Clear cart and close checkout
       clearCart();
       onClose();
-      
+
       // Call the success callback with the order ID
       onSuccess(data.orderId);
     } catch (err) {
@@ -100,14 +100,14 @@ export default function Checkout({ isOpen, onClose, onSuccess }: CheckoutProps) 
                         <p className="font-semibold text-slate-900">{item.title}</p>
                         <p className="text-sm text-slate-600">{item.condition} • Qty: 1</p>
                       </div>
-                      <p className="font-bold text-amber-700">${item.price.toLocaleString()}</p>
+                      <p className="font-bold text-amber-700">PKR {item.price.toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex justify-between items-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <span className="text-lg font-bold text-slate-900">Total Amount</span>
-                  <span className="text-3xl font-black text-amber-700">${total.toLocaleString()}</span>
+                  <span className="text-3xl font-black text-amber-700">PKR {total.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -184,7 +184,7 @@ export default function Checkout({ isOpen, onClose, onSuccess }: CheckoutProps) 
                   disabled={loading}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
-                  {loading ? 'Processing Payment...' : `Complete Purchase - $${total.toLocaleString()}`}
+                  {loading ? 'Processing Payment...' : `Complete Purchase - PKR ${total.toLocaleString()}`}
                 </button>
               </form>
 

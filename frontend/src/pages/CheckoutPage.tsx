@@ -197,7 +197,7 @@ export default function CheckoutPage() {
                       ) : (
                         <>
                           <CreditCard className="h-5 w-5" />
-                          <span>Proceed to Pay ${total.toLocaleString()}</span>
+                          <span>Proceed to Pay PKR {total.toLocaleString()}</span>
                         </>
                       )}
                     </button>
@@ -227,7 +227,7 @@ export default function CheckoutPage() {
                         {item.title}
                       </p>
                       <p className="text-xs text-slate-600 mb-2">{item.condition}</p>
-                      <p className="font-bold text-amber-700">${item.price.toLocaleString()}</p>
+                      <p className="font-bold text-amber-700">PKR {item.price.toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
                 <div className="border-t border-slate-200 pt-4 space-y-2">
                   <div className="flex justify-between text-slate-600">
                     <span>Subtotal</span>
-                    <span>${total.toLocaleString()}</span>
+                    <span>PKR {total.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Shipping</span>
@@ -243,7 +243,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between items-center p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <span className="font-bold text-slate-900">Total</span>
-                    <span className="text-2xl font-black text-amber-700">${total.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-amber-700">PKR {total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>

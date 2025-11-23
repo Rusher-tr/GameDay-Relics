@@ -121,7 +121,8 @@ const getAllOrders = asyncHandler(async (req, res) => {
   const Orders = await Order.find()
     .populate("productId", "title price")
     .populate("buyerId", "username email")
-    .populate("sellerId", "username email");
+    .populate("sellerId", "username email")
+    .sort({ createdAt: -1 });
   return res
     .status(200)
     .json(new ApiResponse(200, Orders, "All Orders Fetched Successfully"));
@@ -131,19 +132,41 @@ const getAllOrders = asyncHandler(async (req, res) => {
 const forcedDeleteUser = asyncHandler(async (req, res) => {
   const adminid = req.user._id;
   const userIdToDelete = req.params.id;
+
   if (!userIdToDelete) {
     throw new APIError(400, "User ID to delete is required");
   }
+
   if (!adminid) {
     throw new APIError(400, "Authentication Error, Try Refreshing Page");
   }
+
   const admincheck = await User.findById(adminid);
   if (!admincheck || admincheck.role !== "admin") {
     throw new APIError(403, "Unauthorized: Admin access required");
   }
+
   const checkUser = await User.findById(userIdToDelete).select("role");
   if (!checkUser || checkUser.role === "admin") {
     throw new APIError(400, "Cannot Delete Admin or Non-Existent User");
+  }
+
+  // If user is a seller, handle product deletion
+  if (checkUser.role === "seller") {
+    const productsbyassociatedseller = await Product.find({ sellerId: userIdToDelete });
+    const productIds = productsbyassociatedseller.map(product => product._id);
+
+    if (productIds.length > 0) {
+      const productvalidation = await Order.find({ productId: { $in: productIds } });
+      const productIdsWithOrders = productvalidation.map(order => order.productId.toString());
+      const productIdsWithoutOrders = productIds.filter(id => !productIdsWithOrders.includes(id.toString()));
+      if (productIdsWithoutOrders.length > 0) {
+        await Product.deleteMany({ _id: { $in: productIdsWithoutOrders } });
+      }
+      if (productIdsWithOrders.length > 0) {
+        throw new APIError(400, `Cannot Delete Seller: ${productIdsWithOrders.length} product(s) have active orders. Deleted ${productIdsWithoutOrders.length} product(s) without orders.`);
+      }
+    }
   }
 
   const deleteduser = await User.findByIdAndDelete(checkUser._id);
@@ -151,6 +174,7 @@ const forcedDeleteUser = asyncHandler(async (req, res) => {
   if (!deleteduser) {
     throw new APIError(400, "Cannot Delete User");
   }
+
   const auditlog = await Auditlog.create({
     action: "User Deleted",
     userId: adminid,
@@ -206,26 +230,26 @@ const solveDispute = asyncHandler(async (req, res) => {
 });
 
 
-const removeProduct = asyncHandler(async(req,res)=>{
+const removeProduct = asyncHandler(async (req, res) => {
   const adminId = req.user._id
   const productId = req.params.id
 
-  if(!adminId){
-    throw new APIError(400,"Admin Id Authentication Error")
+  if (!adminId) {
+    throw new APIError(400, "Admin Id Authentication Error")
   }
-  if(!productId){
-    throw new APIError(400,"Product Id is invalid")
+  if (!productId) {
+    throw new APIError(400, "Product Id is invalid")
   }
-  
+
   const productnotordered = await Order.findById(productId).select("Escrow Held Disputed ")
-  if (productnotordered.tostring()==="Escrow" || productnotordered.tostring()==="Held" || productnotordered.tostring()=== "Disputed"){
-    throw new APIError(400,"Can't Delete Product if its ordered and order is in progress")
+  if (productnotordered.tostring() === "Escrow" || productnotordered.tostring() === "Held" || productnotordered.tostring() === "Disputed") {
+    throw new APIError(400, "Can't Delete Product if its ordered and order is in progress")
   }
 
   const producttodelete = await Product.findByIdAndDelete(productId)
-  
-  if(!producttodelete){
-     throw new APIError(400,"Product doesn't Exist or Deletion Failed")
+
+  if (!producttodelete) {
+    throw new APIError(400, "Product doesn't Exist or Deletion Failed")
   }
 
   const auditl = await Auditlog.create({
@@ -237,7 +261,7 @@ const removeProduct = asyncHandler(async(req,res)=>{
   if (!auditl) {
     throw new APIError(400, "Audit Creation Failed for Raising Dispute ")
   }
-  res.status(200).json(200,new ApiResponse(200,"Forced Product Deleted"))
+  res.status(200).json(200, new ApiResponse(200, "Forced Product Deleted"))
 });
 
 const forceRefund = asyncHandler(async (req, res) => { });
@@ -255,9 +279,9 @@ const getEscrowPayments = asyncHandler(async (req, res) => {
     throw new APIError(403, "Unauthorized: Admin access required");
   }
 
-  // Find all orders that are in escrow status
+  // Find all orders that are in escrow status (including in_transit where seller confirmed delivery)
   const escrowOrders = await Order.find({
-    status: { $in: ["Escrow", "Held", "shipped"] },
+    status: { $in: ["Escrow", "Held", "shipped", "in_transit"] },
     escrowRelease: false
   })
     .populate("productId", "title")
@@ -534,6 +558,10 @@ const processDisputeRefund = asyncHandler(async (req, res) => {
   );
 });
 
+
+
+
+
 // Release escrow for a dispute - release payment to seller with resolution notes
 const releaseEscrowForDispute = asyncHandler(async (req, res) => {
   const adminId = req.user._id;
@@ -666,6 +694,71 @@ const resolveDispute = asyncHandler(async (req, res) => {
   );
 });
 
+// Get all audit logs with pagination
+const getAllAuditLogs = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error, Try Refreshing Page");
+  }
+
+  const admincheck = await User.findById(adminId);
+  if (!admincheck || admincheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  try {
+    const totalAuditLogs = await Auditlog.countDocuments();
+
+    const auditLogs = await Auditlog.find()
+      .populate("userId", "username email role")
+      .populate("sellerId", "username email role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalAuditLogs / limit);
+
+    const formattedLogs = auditLogs.map(log => ({
+      _id: log._id,
+      action: log.action || "null",
+      amount: log.amount || "null",
+      sellerId: log.sellerId ? {
+        _id: log.sellerId._id,
+        username: log.sellerId.username,
+        email: log.sellerId.email,
+        role: log.sellerId.role
+      } : "null",
+      userId: log.userId ? {
+        _id: log.userId._id,
+        username: log.userId.username,
+        email: log.userId.email,
+        role: log.userId.role
+      } : "null",
+      createdAt: log.createdAt || "null",
+      updatedAt: log.updatedAt || "null"
+    }));
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        auditLogs: formattedLogs,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          totalLogs: totalAuditLogs,
+          logsPerPage: limit
+        }
+      }, "Audit logs retrieved successfully")
+    );
+  } catch (error) {
+    throw new APIError(500, `Error retrieving audit logs: ${error.message}`);
+  }
+});
+
+
 export {
   forceCancelOrder,
   getAllUsers,
@@ -680,5 +773,6 @@ export {
   getDisputeDetails,
   processDisputeRefund,
   releaseEscrowForDispute,
-  resolveDispute
+  resolveDispute,
+  getAllAuditLogs
 };

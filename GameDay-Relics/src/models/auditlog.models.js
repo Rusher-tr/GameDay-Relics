@@ -5,9 +5,6 @@ const auditlogSchema = new Schema(
     action: {
       type: String,
     },
-    paymentMethod: {
-      type: String,
-    },
     amount: {
       type: Number,
     },
