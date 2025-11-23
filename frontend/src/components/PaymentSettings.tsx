@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DollarSign, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../lib/api';
 
@@ -15,6 +16,7 @@ interface PaymentDetails {
 }
 
 export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
+  const navigate = useNavigate();
   const [paymentGateway, setPaymentGateway] = useState<PaymentGateway>('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -87,12 +89,15 @@ export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
         stripeAccountId,
       });
 
-      setSuccess('Payment settings updated successfully!');
+      setSuccess('Payment settings saved successfully! Redirecting...');
       if (onUpdate) {
         onUpdate();
       }
 
-      setTimeout(() => setSuccess(''), 3000);
+      // Redirect to seller products page after 2 seconds
+      setTimeout(() => {
+        navigate('/seller-products');
+      }, 2000);
     } catch (err: any) {
       console.error('Error updating payment settings:', err);
       setError(err?.response?.data?.message || 'Failed to update payment settings');

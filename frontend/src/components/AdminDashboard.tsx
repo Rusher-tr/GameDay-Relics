@@ -24,6 +24,19 @@ interface EscrowOrder {
   transferId?: string;
   payoutInitiatedAt?: string;
   payoutCompletedAt?: string;
+  seller?: {
+    id: string;
+    username: string;
+    email: string;
+    paymentGateway?: string;
+    paymentDetails?: {
+      accountNumber?: string;
+      accountName?: string;
+      stripeAccountId?: string;
+      stripeConnectedAccountId?: string;
+      stripeOnboardingStatus?: 'pending' | 'completed' | 'rejected';
+    };
+  };
   order?: {
     id: string;
     buyer_id: string;
@@ -102,6 +115,9 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
     try {
       if (tab === 'escrow') {
         const response = await api.get('/admins/escrow-payments');
+        console.log('🔍 Escrow Response:', response.data);
+        console.log('🔍 First Escrow:', response.data.data?.[0]);
+        console.log('🔍 First Escrow Seller:', response.data.data?.[0]?.seller);
         setEscrows(response.data.data || []);
       } else if (tab === 'disputes') {
         const response = await api.get('/admins/disputes');
@@ -514,6 +530,59 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                             >
                               Check Status
                             </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Seller Payment Information */}
+                    {escrow.seller && (
+                      <div className="mb-4 pb-3 border-t border-slate-200 pt-3">
+                        <p className="text-sm font-semibold text-slate-700 mb-2">💳 Seller Payment Info:</p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                          <p className="text-sm text-slate-700">
+                            <span className="font-semibold">Seller:</span> {escrow.seller.username} ({escrow.seller.email})
+                          </p>
+
+                          {escrow.seller.paymentGateway && (
+                            <p className="text-sm text-slate-700">
+                              <span className="font-semibold">Payment Method:</span>
+                              <span className="px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-bold ml-2">
+                                {escrow.seller.paymentGateway.toUpperCase()}
+                              </span>
+                            </p>
+                          )}
+
+                          {escrow.seller.paymentGateway === 'stripe' && escrow.seller.paymentDetails?.stripeConnectedAccountId ? (
+                            <>
+                              <p className="text-sm text-slate-700">
+                                <span className="font-semibold">Stripe Connected Account:</span>{' '}
+                                <code className="bg-slate-200 px-1 rounded text-xs">
+                                  {escrow.seller.paymentDetails.stripeConnectedAccountId}
+                                </code>
+                              </p>
+                              <p className="text-xs text-green-700 font-semibold">
+                                ✓ Automated transfer enabled
+                              </p>
+                            </>
+                          ) : escrow.seller.paymentDetails?.accountNumber ? (
+                            <>
+                              <p className="text-sm text-slate-700">
+                                <span className="font-semibold">Account Number:</span> {escrow.seller.paymentDetails.accountNumber}
+                              </p>
+                              {escrow.seller.paymentDetails.accountName && (
+                                <p className="text-sm text-slate-700">
+                                  <span className="font-semibold">Account Name:</span> {escrow.seller.paymentDetails.accountName}
+                                </p>
+                              )}
+                              <p className="text-xs text-amber-700 font-semibold">
+                                ⚠️ Manual payment required
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-xs text-red-700 font-semibold">
+                              ❌ Seller has not configured payment settings!
+                            </p>
                           )}
                         </div>
                       </div>

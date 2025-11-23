@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CreditCard, CheckCircle, AlertCircle, Link2, Unlink2, Loader } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
+import PaymentSettings from '../components/PaymentSettings';
 
 interface AccountStatus {
   status: 'not_connected' | 'pending' | 'completed';
@@ -27,15 +28,15 @@ export default function PaymentSettingsPage() {
       navigate('/');
       return;
     }
-    
+
     // Check if returning from Stripe onboarding
     const params = new URLSearchParams(window.location.search);
     const isSuccess = params.get('success') === 'true';
     const isRefresh = params.get('refresh') === 'true';
-    
+
     // Load status immediately
     checkAccountStatus();
-    
+
     // If returning from Stripe, show success message and refresh
     if (isSuccess) {
       setTimeout(() => {
@@ -43,7 +44,7 @@ export default function PaymentSettingsPage() {
         checkAccountStatus();
       }, 1000);
     }
-    
+
     if (isRefresh) {
       toast.info('📝 Please complete your Stripe onboarding');
     }
@@ -126,7 +127,7 @@ export default function PaymentSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-black text-slate-900">Payment Settings</h1>
-              <p className="text-slate-600 mt-1">Manage your Stripe account and payout settings</p>
+              <p className="text-slate-600 mt-1">Manage your payment methods: Stripe Connect or manual gateways</p>
             </div>
             <button
               onClick={() => navigate('/seller-products')}
@@ -255,6 +256,9 @@ export default function PaymentSettingsPage() {
             )}
           </div>
         </div>
+
+        {/* Manual Payment Settings Section */}
+        <PaymentSettings onUpdate={checkAccountStatus} />
 
         {/* Information Card */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">

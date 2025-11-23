@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const {  email, username, password , role } = req.body;
+  const { email, username, password, role } = req.body;
   if ([email, username, password].some((field) => !field || field.trim() === "")) {
     throw new APIError(400, "Email, username, and password are required");
   }
@@ -59,7 +59,7 @@ const generateAccessandRefreshTokens = async (userId) => {
 };
 
 const loginUser = asyncHandler(async (req, res) => {
- 
+
   const { email, username, password } = req.body;
 
 
@@ -75,7 +75,7 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new APIError(404, "User doesn't exist, Register yourself first");
   }
-  
+
 
   const isPasswordvalid = await user.isPasswordcorrect(password);
 
@@ -93,7 +93,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax", 
+    sameSite: "lax",
   };
 
   return res
@@ -114,10 +114,10 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  
+
   await User.findByIdAndUpdate(
 
-    req.user._id, 
+    req.user._id,
     {
       $set: { refreshToken: null },
     },
@@ -125,7 +125,7 @@ const logoutUser = asyncHandler(async (req, res) => {
       new: true,
     }
   );
-  
+
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -165,7 +165,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const options = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", 
+      sameSite: "lax",
     };
     const { accessToken, refreshToken } =
       await generateAccessandRefreshTokens(user._id);
@@ -205,7 +205,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  
+
   if (!req.user) {
     return res
       .status(200)
@@ -254,7 +254,7 @@ const updatePaymentSettings = asyncHandler(async (req, res) => {
   if (!user || user.role !== "seller") {
     throw new APIError(403, "Only sellers can update payment settings");
   }
-  
+
   const validGateways = ["nayapay", "easypaisa", "jazzcash", "stripe"];
   if (paymentGateway && !validGateways.includes(paymentGateway)) {
     throw new APIError(400, "Invalid payment gateway. Must be one of: nayapay, easypaisa, jazzcash, stripe");
@@ -298,7 +298,7 @@ const getPaymentSettings = asyncHandler(async (req, res) => {
     throw new APIError(400, "Authentication Error");
   }
 
-  const user = await User.findById(userId).select("paymentGateway paymentDetails");
+  const user = await User.findById(userId).select("role paymentGateway paymentDetails");
   if (!user) {
     throw new APIError(404, "User not found");
   }

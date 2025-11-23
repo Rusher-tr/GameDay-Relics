@@ -287,7 +287,7 @@ const getEscrowPayments = asyncHandler(async (req, res) => {
   })
     .populate("productId", "title")
     .populate("buyerId", "username email")
-    .populate("sellerId", "username email")
+    .populate("sellerId", "username email paymentGateway paymentDetails")
     .sort({ createdAt: -1 });
 
   // Transform to match frontend expected format
@@ -298,6 +298,13 @@ const getEscrowPayments = asyncHandler(async (req, res) => {
     status: 'held',
     held_at: order.createdAt,
     buyerSatisfaction: order.buyerSatisfaction || 'pending',
+    seller: {
+      id: order.sellerId?._id?.toString(),
+      username: order.sellerId?.username,
+      email: order.sellerId?.email,
+      paymentGateway: order.sellerId?.paymentGateway,
+      paymentDetails: order.sellerId?.paymentDetails,
+    },
     order: {
       id: order._id.toString(),
       buyer_id: order.buyerId?._id?.toString(),
