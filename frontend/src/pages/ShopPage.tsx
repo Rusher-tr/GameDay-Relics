@@ -31,7 +31,16 @@ export default function ShopPage() {
       try {
         const response = await api.get('/products');
         // Backend returns: { statusCode, data: { products, pagination }, message, success }
-        setProducts(response.data.data.products || []);
+        const productsData = response.data.data.products || [];
+        setProducts(productsData);
+        // Log conditions for debugging
+        const uniqueConditions = new Set(
+          productsData
+            .map(p => p.condition)
+            .filter(condition => condition && condition.trim() !== '')
+        );
+        console.log('Available conditions:', Array.from(uniqueConditions));
+        console.log('Sample products:', productsData.slice(0, 3).map(p => ({ title: p.title, condition: p.condition })));
       } catch (error) {
         console.error('Error fetching products:', error);
         setProducts([]);
@@ -72,7 +81,11 @@ export default function ShopPage() {
 
   // Extract unique conditions from products
   const conditions = useMemo(() => {
-    const conds = new Set(products.map(p => p.condition));
+    const conds = new Set(
+      products
+        .map(p => p.condition || 'Unknown') // Use 'Unknown' as fallback
+        .filter(condition => condition && condition.trim() !== '')
+    );
     return Array.from(conds).sort();
   }, [products]);
 
@@ -90,8 +103,11 @@ export default function ShopPage() {
       }
 
       // Condition filter
-      if (selectedCondition && product.condition !== selectedCondition) {
-        return false;
+      if (selectedCondition) {
+        const productCondition = product.condition || 'Unknown';
+        if (productCondition.trim() !== selectedCondition.trim()) {
+          return false;
+        }
       }
 
       // Price filter
@@ -362,6 +378,7 @@ export default function ShopPage() {
 
             {showMobileFilters && (
               <div className="mt-4 bg-white rounded border p-6 space-y-4" style={{ borderColor: '#d4c9b9' }}>
+                {/* Sort By */}
                 <div>
                   <label className="font-georgia font-bold mb-2 block" style={{ color: '#1c452a' }}>Sort By</label>
                   <select
@@ -377,6 +394,69 @@ export default function ShopPage() {
                     <option value="price-low">Price: Low to High</option>
                     <option value="price-high">Price: High to Low</option>
                   </select>
+                </div>
+
+                <div className="border-t" style={{ borderColor: '#d4c9b9' }}></div>
+
+                {/* Condition Filter */}
+                <div>
+                  <label className="font-georgia font-bold mb-2 block" style={{ color: '#1c452a' }}>Condition</label>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedCondition(null)}
+                      className="block w-full text-left px-3 py-2 rounded font-inter transition-colors"
+                      style={{
+                        backgroundColor: selectedCondition === null ? '#1c452a' : 'transparent',
+                        color: selectedCondition === null ? '#f2dec4' : '#1c452a'
+                      }}
+                    >
+                      All Conditions
+                    </button>
+                    {conditions.map(cond => (
+                      <button
+                        key={cond}
+                        onClick={() => setSelectedCondition(cond)}
+                        className="block w-full text-left px-3 py-2 rounded font-inter transition-colors"
+                        style={{
+                          backgroundColor: selectedCondition === cond ? '#1c452a' : 'transparent',
+                          color: selectedCondition === cond ? '#f2dec4' : '#1c452a'
+                        }}
+                      >
+                        {cond}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t" style={{ borderColor: '#d4c9b9' }}></div>
+
+                {/* Price Range Filter */}
+                <div>
+                  <label className="text-sm font-georgia font-bold mb-3 block" style={{ color: '#1c452a' }}>Price Range</label>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Min: PKR {(priceRange[0] / 1000).toFixed(0)}K</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="300000"
+                        value={priceRange[0]}
+                        onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-inter mb-1 block" style={{ color: '#1c452a' }}>Max: PKR {(priceRange[1] / 1000).toFixed(0)}K</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="300000"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

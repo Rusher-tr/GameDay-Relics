@@ -22,6 +22,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const { signIn, signUp, signOut, user } = useAuth();
 
+  // Clear form fields utility function
+  const clearFormFields = () => {
+    setEmail('');
+    setPassword('');
+    setName('');
+    setError('');
+  };
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +37,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return () => {
         document.body.style.overflow = '';
       };
+    }
+  }, [isOpen]);
+
+  // Clear form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      clearFormFields();
     }
   }, [isOpen]);
 
@@ -45,6 +60,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         await signIn(email, password);
       }
+      // Clear form fields on successful authentication
+      clearFormFields();
       // Only close on success
       onClose();
     } catch (err: any) {
@@ -70,6 +87,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleSignOut = async () => {
     try {
       await signOut();
+      clearFormFields();
       onClose();
       navigate('/');
     } catch (err) {
@@ -222,7 +240,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   onClick={() => {
                     setIsSignUp(!isSignUp);
                     setRole('buyer');
-                    setError('');
+                    clearFormFields();
                   }}
                   className="text-amber-700 hover:text-amber-800 font-semibold block w-full"
                 >
