@@ -23,7 +23,7 @@ const userSchema = new Schema(
       required: true,
     },
     transactionId: {
-      type: String, 
+      type: String,
     },
 
     role: {
@@ -36,11 +36,21 @@ const userSchema = new Schema(
       type: String,
       enum: ["nayapay", "easypaisa", "jazzcash", "stripe"],
     },
+    activePaymentMethod: {
+      type: String,
+      enum: ["stripe", "manual"],
+      default: null
+    },
     paymentDetails: {
-      accountNumber: String, 
+      accountNumber: String,
       accountName: String,
-      stripeAccountId: String, 
+      stripeAccountId: String,
       stripeConnectedAccountId: String, // Connected account ID for automated payouts
+      stripeAccountType: {
+        type: String,
+        enum: ['express', 'standard'],
+        default: 'express'
+      },
       stripeOnboardingStatus: { // 'pending', 'completed', 'rejected'
         type: String,
         enum: ['pending', 'completed', 'rejected'],
@@ -56,7 +66,7 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next(); 
+  if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
   next();

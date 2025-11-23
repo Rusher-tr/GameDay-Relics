@@ -8,7 +8,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // Create or update Stripe Connect onboarding link for seller
 export const createStripeConnectLink = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
-  
+
   // Verify user is a seller
   if (req.user.role !== "seller") {
     throw new APIError(403, "Only sellers can connect Stripe accounts");
@@ -29,17 +29,19 @@ export const createStripeConnectLink = asyncHandler(async (req, res) => {
 
     // Create new connected account if it doesn't exist
     if (!connectedAccountId) {
+      console.log(`[Stripe Connect] Creating new Express account for seller ${sellerId}`);
+
       const account = await stripe.accounts.create({
         type: "express",
-        country: "PK",
+        country: "US",
         email: seller.email,
-        business_profile: {
-          mcc: "5734", // Software stores MCC
-          url: process.env.FRONTEND_URL || "http://localhost:5173",
+        capabilities: {
+          transfers: { requested: true },
         },
       });
       connectedAccountId = account.id;
       seller.paymentDetails.stripeConnectedAccountId = connectedAccountId;
+      seller.paymentDetails.stripeAccountType = "express";
       console.log(`[Stripe Connect] Created new account ${connectedAccountId} for seller ${sellerId}`);
     }
 
@@ -54,6 +56,7 @@ export const createStripeConnectLink = asyncHandler(async (req, res) => {
 
     seller.paymentDetails.stripeOnboardingUrl = accountLink.url;
     seller.paymentDetails.stripeOnboardingStatus = "pending";
+    seller.activePaymentMethod = "stripe"; // Set Stripe as active payment method
     await seller.save();
 
     console.log(`[Stripe Connect] Generated onboarding link for seller ${sellerId}`);
@@ -63,8 +66,8 @@ export const createStripeConnectLink = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          "Stripe onboarding link created successfully",
-          { url: accountLink.url }
+          { url: accountLink.url },
+          "Stripe onboarding link created successfully"
         )
       );
   } catch (error) {
@@ -73,6 +76,117 @@ export const createStripeConnectLink = asyncHandler(async (req, res) => {
       500,
       `Failed to create Stripe Connect link: ${error.message}`
     );
+  }
+});
+
+// Generate OAuth authorization URL for sellers with existing Stripe accounts
+export const createOAuthLink = asyncHandler(async (req, res) => {
+  const sellerId = req.user._id;
+
+  // Verify user is a seller
+  if (req.user.role !== "seller") {
+    throw new APIError(403, "Only sellers can connect Stripe accounts");
+  }
+
+  try {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const stripeClientId = process.env.STRIPE_CLIENT_ID;
+
+    if (!stripeClientId) {
+      throw new APIError(500, "Stripe Client ID not configured. Please contact support.");
+    }
+
+    // Build OAuth authorization URL
+    const oauthUrl = `https://connect.stripe.com/oauth/authorize?` +
+      `response_type=code&` +
+      `client_id=${stripeClientId}&` +
+      `scope=read_write&` +
+      `redirect_uri=${encodeURIComponent(`${frontendUrl}/payment-settings/oauth-callback`)}&` +
+      `state=${sellerId}`;  // Pass seller ID for verification
+
+    console.log(`[Stripe OAuth] Generated OAuth URL for seller ${sellerId}`);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { url: oauthUrl },
+          "OAuth authorization URL created successfully"
+        )
+      );
+  } catch (error) {
+    console.error("[Stripe OAuth Error]", error);
+    throw new APIError(
+      500,
+      `Failed to create OAuth URL: ${error.message}`
+    );
+  }
+});
+
+// Handle OAuth callback from Stripe
+export const handleOAuthCallback = asyncHandler(async (req, res) => {
+  const { code, state } = req.query;  // code = authorization code, state = seller ID
+
+  if (!code) {
+    throw new APIError(400, "Authorization code missing");
+  }
+
+  if (!state) {
+    throw new APIError(400, "Seller ID missing in state parameter");
+  }
+
+  const sellerId = state;
+
+  try {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+    // Exchange authorization code for access token and account ID
+    const response = await fetch('https://connect.stripe.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${stripeSecretKey}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error_description || 'OAuth token exchange failed');
+    }
+
+    const data = await response.json();
+    const connectedAccountId = data.stripe_user_id;  // This is the seller's Stripe account ID
+
+    console.log(`[Stripe OAuth] Successfully connected account ${connectedAccountId} for seller ${sellerId}`);
+
+    // Save connected account ID to seller
+    const seller = await User.findById(sellerId);
+    if (!seller) {
+      throw new APIError(404, "Seller not found");
+    }
+
+    if (!seller.paymentDetails) {
+      seller.paymentDetails = {};
+    }
+
+    seller.paymentDetails.stripeConnectedAccountId = connectedAccountId;
+    seller.paymentDetails.stripeAccountType = "standard";  // Mark as OAuth/Standard account
+    seller.paymentDetails.stripeOnboardingStatus = "completed";
+    await seller.save();
+
+    // Redirect back to payment settings with success
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    return res.redirect(`${frontendUrl}/payment-settings?connected=true&type=oauth`);
+
+  } catch (error) {
+    console.error("[Stripe OAuth Callback Error]", error);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    return res.redirect(`${frontendUrl}/payment-settings?error=oauth_failed&message=${encodeURIComponent(error.message)}`);
   }
 });
 
@@ -96,10 +210,10 @@ export const getStripeAccountStatus = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(
-        new ApiResponse(200, "No connected account", {
+        new ApiResponse(200, {
           status: "not_connected",
           url: null,
-        })
+        }, "No connected account")
       );
   }
 
@@ -121,13 +235,13 @@ export const getStripeAccountStatus = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(
-        new ApiResponse(200, "Account status retrieved", {
+        new ApiResponse(200, {
           status,
           accountId: connectedAccountId,
           chargesEnabled: account.charges_enabled,
           payoutsEnabled: account.payouts_enabled,
           requirements: account.requirements?.currently_due || [],
-        })
+        }, "Account status retrieved")
       );
   } catch (error) {
     console.error("[Stripe Account Status Error]", error);
@@ -177,6 +291,7 @@ export const disconnectStripeAccount = asyncHandler(async (req, res) => {
   }
 });
 
+
 export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
   const buyer = await User.findById(buyerId);
   if (!buyer) throw new APIError(404, "Buyer not found");
@@ -198,7 +313,7 @@ export const createCheckoutSession_INTERNAL = async (buyerId, orderId) => {
     line_items: [
       {
         price_data: {
-          currency: "pkr", 
+          currency: "pkr",
           product_data: {
             name: item.title || "Item",
             description: item.description || "",

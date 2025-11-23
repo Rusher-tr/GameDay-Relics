@@ -281,6 +281,7 @@ const updatePaymentSettings = asyncHandler(async (req, res) => {
     accountName: accountName || user.paymentDetails?.accountName,
     stripeAccountId: stripeAccountId || user.paymentDetails?.stripeAccountId,
   };
+  user.activePaymentMethod = "manual"; // Set manual as active
 
   await user.save({ validateBeforeSave: false });
 

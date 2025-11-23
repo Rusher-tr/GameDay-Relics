@@ -67,16 +67,9 @@ export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
       return;
     }
 
-    if (paymentGateway === 'stripe') {
-      if (!stripeAccountId.trim()) {
-        setError('Stripe Account ID is required');
-        return;
-      }
-    } else {
-      if (!accountNumber.trim() || !accountName.trim()) {
-        setError('Account number and account name are required');
-        return;
-      }
+    if (!accountNumber.trim() || !accountName.trim()) {
+      setError('Account number and account name are required');
+      return;
     }
 
     setLoading(true);
@@ -163,15 +156,14 @@ export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
             <option value="nayapay">NayaPay</option>
             <option value="easypaisa">EasyPaisa</option>
             <option value="jazzcash">JazzCash</option>
-            <option value="stripe">Stripe</option>
           </select>
           <p className="mt-1 text-xs text-slate-500">
-            Choose how you want to receive payments when admin releases escrow
+            Choose your mobile wallet for manual payments. For Stripe, use the Stripe Connect section above.
           </p>
         </div>
 
         {/* Conditional Fields based on Gateway */}
-        {paymentGateway && paymentGateway !== 'stripe' && (
+        {paymentGateway && (
           <>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -207,25 +199,6 @@ export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
               </p>
             </div>
           </>
-        )}
-
-        {paymentGateway === 'stripe' && (
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Stripe Account ID <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={stripeAccountId}
-              onChange={(e) => setStripeAccountId(e.target.value)}
-              placeholder="acct_xxxxxxxxxxxx"
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-              required
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Your Stripe Connect account ID for receiving payments
-            </p>
-          </div>
         )}
 
         {/* Submit Button */}

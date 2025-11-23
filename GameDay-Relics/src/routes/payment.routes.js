@@ -5,6 +5,8 @@ import {
   createCheckoutSession_INTERNAL,
   handlePaymentCancel,
   createStripeConnectLink,
+  createOAuthLink,
+  handleOAuthCallback,
   getStripeAccountStatus,
   disconnectStripeAccount,
 } from "../controllers/payment.controller.js";
@@ -116,6 +118,27 @@ router.get(
   "/connect/status",
   verifyJWT,
   getStripeAccountStatus
+);
+
+/**
+ * POST /api/v1/payment/connect/oauth-url
+ * Generate OAuth authorization URL for sellers with existing Stripe accounts
+ * Requires: Seller authentication
+ */
+router.post(
+  "/connect/oauth-url",
+  verifyJWT,
+  createOAuthLink
+);
+
+/**
+ * GET /api/v1/payment/connect/oauth-callback
+ * Handle OAuth callback from Stripe (redirect endpoint)
+ * Public endpoint - no authentication required
+ */
+router.get(
+  "/connect/oauth-callback",
+  handleOAuthCallback
 );
 
 /**

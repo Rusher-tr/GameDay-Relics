@@ -287,33 +287,60 @@ const getEscrowPayments = asyncHandler(async (req, res) => {
   })
     .populate("productId", "title")
     .populate("buyerId", "username email")
-    .populate("sellerId", "username email paymentGateway paymentDetails")
+    .populate("sellerId", "username email paymentGateway paymentDetails activePaymentMethod")
     .sort({ createdAt: -1 });
 
   // Transform to match frontend expected format
-  const escrowPayments = escrowOrders.map(order => ({
-    id: order._id.toString(),
-    order_id: order._id.toString(),
-    amount: order.amount,
-    status: 'held',
-    held_at: order.createdAt,
-    buyerSatisfaction: order.buyerSatisfaction || 'pending',
-    seller: {
-      id: order.sellerId?._id?.toString(),
-      username: order.sellerId?.username,
-      email: order.sellerId?.email,
-      paymentGateway: order.sellerId?.paymentGateway,
-      paymentDetails: order.sellerId?.paymentDetails,
-    },
-    order: {
-      id: order._id.toString(),
-      buyer_id: order.buyerId?._id?.toString(),
-      seller_id: order.sellerId?._id?.toString(),
-      product_id: order.productId?._id?.toString(),
-      price: order.amount,
-      status: order.status
+  const escrowPayments = escrowOrders.map(order => {
+    const seller = order.sellerId;
+    const activeMethod = seller?.activePaymentMethod;
+
+    // Filter payment info based on active method
+    let paymentGateway = null;
+    let paymentDetails = null;
+
+    if (activeMethod === 'stripe' && seller?.paymentDetails?.stripeConnectedAccountId) {
+      // Show only Stripe details
+      paymentGateway = 'stripe';
+      paymentDetails = {
+        stripeConnectedAccountId: seller.paymentDetails.stripeConnectedAccountId,
+        stripeAccountType: seller.paymentDetails.stripeAccountType,
+        stripeOnboardingStatus: seller.paymentDetails.stripeOnboardingStatus
+      };
+    } else if (activeMethod === 'manual' && seller?.paymentGateway && seller?.paymentDetails?.accountNumber) {
+      // Show only manual payment details
+      paymentGateway = seller.paymentGateway;
+      paymentDetails = {
+        accountNumber: seller.paymentDetails.accountNumber,
+        accountName: seller.paymentDetails.accountName
+      };
     }
-  }));
+
+    return {
+      id: order._id.toString(),
+      order_id: order._id.toString(),
+      amount: order.amount,
+      status: 'held',
+      held_at: order.createdAt,
+      buyerSatisfaction: order.buyerSatisfaction || 'pending',
+      seller: {
+        id: seller?._id?.toString(),
+        username: seller?.username,
+        email: seller?.email,
+        paymentGateway,
+        paymentDetails,
+        activePaymentMethod: activeMethod
+      },
+      order: {
+        id: order._id.toString(),
+        buyer_id: order.buyerId?._id?.toString(),
+        seller_id: seller?._id?.toString(),
+        product_id: order.productId?._id?.toString(),
+        price: order.amount,
+        status: order.status
+      }
+    };
+  });
 
   return res.status(200).json(
     new ApiResponse(200, escrowPayments, "Escrow payments fetched successfully")
@@ -364,43 +391,77 @@ const releaseEscrowPayment = asyncHandler(async (req, res) => {
 
   if (connectedAccountId) {
     // Automated transfer via Stripe Connected Account
+    const isTestMode = process.env.NODE_ENV !== 'production' || process.env.STRIPE_SECRET_KEY?.includes('_test_');
+
     try {
-      const transfer = await stripe.transfers.create({
-        amount: Math.round(order.amount * 100), // Amount in cents
-        currency: "pkr",
-        destination: connectedAccountId,
-        metadata: {
-          orderId: order._id.toString(),
-          sellerId: seller._id.toString(),
-        },
-        description: `Payment for order ${order._id}`,
-      });
+      if (isTestMode) {
+        // In test mode, skip actual Stripe transfer (no balance available)
+        // Just mark as released and simulate success
+        console.log(`[Test Mode] Skipping Stripe transfer for order ${order._id}, amount: ${order.amount}`);
 
-      order.transferId = transfer.id;
-      order.payoutStatus = "succeeded";
-      order.payoutCompletedAt = new Date();
+        order.transferId = `test_transfer_${Date.now()}`;
+        order.payoutStatus = "succeeded";
+        order.payoutCompletedAt = new Date();
+        order.escrowRelease = true;
+        order.status = "Completed"; // Note: Capital C to match enum
 
-      // Create audit log for automated transfer
-      await Auditlog.create({
-        action: `Automated Stripe Transfer - Order ${order._id}`,
-        amount: order.amount,
-        sellerId: order.sellerId,
-        userId: adminId,
-      });
+        // Create audit log
+        await Auditlog.create({
+          action: `Escrow Released (Test Mode - Stripe) - Order ${order._id}`,
+          amount: order.amount,
+          sellerId: order.sellerId,
+          userId: adminId,
+        });
 
-      await order.save();
+        await order.save();
 
-      return res.status(200).json(
-        new ApiResponse(200, {
-          order,
-          paymentMethod: "stripe_connected_account",
-          transfer: {
-            id: transfer.id,
-            amount: transfer.amount / 100,
-            status: transfer.status,
+        return res.status(200).json(
+          new ApiResponse(200, {
+            order,
+            paymentMethod: "stripe_connected_account",
+            testMode: true,
+            message: "Test mode: Order marked as released without actual Stripe transfer"
+          }, "Escrow released successfully (Test Mode)")
+        );
+      } else {
+        // Production mode: Actual Stripe transfer
+        const transfer = await stripe.transfers.create({
+          amount: Math.round(order.amount * 100), // Amount in cents
+          currency: "pkr",
+          destination: connectedAccountId,
+          metadata: {
+            orderId: order._id.toString(),
+            sellerId: seller._id.toString(),
           },
-        }, "Escrow payment transferred successfully via Stripe Connect")
-      );
+          description: `Payment for order ${order._id}`,
+        });
+
+        order.transferId = transfer.id;
+        order.payoutStatus = "succeeded";
+        order.payoutCompletedAt = new Date();
+
+        // Create audit log for automated transfer
+        await Auditlog.create({
+          action: `Automated Stripe Transfer - Order ${order._id}`,
+          amount: order.amount,
+          sellerId: order.sellerId,
+          userId: adminId,
+        });
+
+        await order.save();
+
+        return res.status(200).json(
+          new ApiResponse(200, {
+            order,
+            paymentMethod: "stripe_connected_account",
+            transfer: {
+              id: transfer.id,
+              amount: transfer.amount / 100,
+              status: transfer.status,
+            },
+          }, "Escrow payment transferred successfully via Stripe Connect")
+        );
+      }
     } catch (stripeError) {
       console.error("[Stripe Transfer Error]", stripeError);
       // Fall back to manual payment if transfer fails
