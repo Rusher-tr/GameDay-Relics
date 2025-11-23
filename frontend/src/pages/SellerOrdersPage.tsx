@@ -16,7 +16,7 @@ interface Order {
   } | null;
   sellerId: string;
   transactionId: string | null;
-  status: 'pending' | 'Escrow' | 'Held' | 'shipped' | 'in_transit' | 'Completed' | 'Disputed' | 'Refunded' | 'Cancelled';
+  status: 'pending' | 'Escrow' | 'Held' | 'shipped' | 'Completed' | 'Disputed' | 'Refunded' | 'Cancelled';
   amount: number;
   escrowRelease: boolean;
   deliveryGatewayOptions: string[];
@@ -80,8 +80,6 @@ export default function SellerOrdersPage() {
         return <Package className="h-5 w-5 text-blue-600" />;
       case 'shipped':
         return <Truck className="h-5 w-5 text-purple-600" />;
-      case 'in_transit':
-        return <Truck className="h-5 w-5 text-purple-600" />;
       case 'Completed':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'Disputed':
@@ -101,8 +99,6 @@ export default function SellerOrdersPage() {
       case 'Held':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'shipped':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'in_transit':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'Completed':
         return 'bg-green-100 text-green-800 border-green-300';
@@ -157,11 +153,11 @@ export default function SellerOrdersPage() {
 
       setOrders(orders.map(order =>
         order._id === orderId
-          ? { ...order, status: 'in_transit', sellerDeliveryConfirmed: new Date().toISOString() }
+          ? { ...order, status: 'shipped', sellerDeliveryConfirmed: new Date().toISOString() } // Keep as 'shipped'
           : order
       ));
 
-      toast.success('Delivery confirmed! Package is now in transit.');
+      toast.success('Delivery confirmed! Awaiting admin escrow release');
     } catch (err: any) {
       console.error('Error confirming delivery:', err);
       toast.error(err?.response?.data?.message || 'Failed to confirm delivery');
@@ -489,7 +485,7 @@ export default function SellerOrdersPage() {
                 )}
 
                 {/* Buyer Confirmation Status - Show when buyer has marked satisfaction */}
-                {order.status === 'in_transit' && (
+                {/* {order.status === 'shipped' && order.buyerSatisfaction !== 'pending' && (
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                       <div className="flex items-start gap-3">
@@ -519,7 +515,7 @@ export default function SellerOrdersPage() {
                       )}
                     </button>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           ))}

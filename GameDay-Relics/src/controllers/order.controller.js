@@ -336,8 +336,8 @@ const markBuyerSatisfaction = asyncHandler(async (req, res) => {
     order.sellerDeliveryConfirmed = new Date();
   }
 
-  // Change status to in_transit to show package is on the way
-  order.status = "in_transit";
+  // Keep status as 'shipped' instead of changing to 'in_transit'
+  // order.status = "in_transit";
 
   // Set auto-satisfaction date to 7 days from now
   const autoSatDate = new Date();

@@ -280,9 +280,9 @@ const getEscrowPayments = asyncHandler(async (req, res) => {
     throw new APIError(403, "Unauthorized: Admin access required");
   }
 
-  // Find all orders that are in escrow status (including in_transit where seller confirmed delivery)
+  // Find all orders that are in escrow status (including shipped where seller confirmed delivery)
   const escrowOrders = await Order.find({
-    status: { $in: ["Escrow", "Held", "shipped", "in_transit"] },
+    status: { $in: ["Escrow", "Held", "shipped"] },
     escrowRelease: false
   })
     .populate("productId", "title")

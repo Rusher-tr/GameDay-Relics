@@ -24,7 +24,6 @@ const orderSchema = new Schema(
         "Escrow",
         "Held",
         "shipped",
-        "in_transit",
         "Completed",
         "Disputed",
         "Refunded",

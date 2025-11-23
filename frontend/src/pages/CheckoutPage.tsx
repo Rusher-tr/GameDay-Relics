@@ -188,7 +188,7 @@ export default function CheckoutPage() {
                       value={shippingAddress.street}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="123 Main St"
+                      placeholder="123 Bandar Road"
                     />
                   </div>
                   <div>
@@ -198,7 +198,7 @@ export default function CheckoutPage() {
                       value={shippingAddress.city}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="New York"
+                      placeholder="Karachi"
                     />
                   </div>
                   <div>
@@ -208,7 +208,7 @@ export default function CheckoutPage() {
                       value={shippingAddress.postalCode}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="10001"
+                      placeholder="74700"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -218,7 +218,7 @@ export default function CheckoutPage() {
                       value={shippingAddress.country}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="United States"
+                      placeholder="Pakistan"
                     />
                   </div>
                 </div>
