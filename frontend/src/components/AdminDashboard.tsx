@@ -20,6 +20,10 @@ interface EscrowOrder {
   status: string;
   held_at: string;
   buyerSatisfaction?: 'pending' | 'satisfied' | 'fine' | 'disputed';
+  payoutStatus?: 'pending' | 'succeeded' | 'failed';
+  transferId?: string;
+  payoutInitiatedAt?: string;
+  payoutCompletedAt?: string;
   order?: {
     id: string;
     buyer_id: string;
@@ -477,6 +481,43 @@ export default function AdminDashboard({ isOpen, onClose }: AdminDashboardProps)
                         </span>
                       </div>
                     </div>
+
+                    {/* Payout Status */}
+                    {escrow.payoutStatus && (
+                      <div className="mb-4 pb-3 border-b border-slate-200">
+                        <div className="flex items-center gap-2 justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700">Payout Status:</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${escrow.payoutStatus === 'succeeded'
+                              ? 'bg-green-100 text-green-800 border border-green-300'
+                              : escrow.payoutStatus === 'failed'
+                                ? 'bg-red-100 text-red-800 border border-red-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                              }`}>
+                              {escrow.payoutStatus === 'succeeded' ? '✅ Completed' :
+                                escrow.payoutStatus === 'failed' ? '❌ Failed' :
+                                  '⏳ Pending'}
+                            </span>
+                          </div>
+                          {escrow.transferId && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await api.get(`/admins/orders/${escrow.order_id}/transfer-status`);
+                                  toast.info(`Transfer Status: ${response.data.data.transfer.status}`);
+                                } catch (error: any) {
+                                  toast.error(error?.response?.data?.message || 'Failed to check transfer status');
+                                }
+                              }}
+                              className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-semibold transition-colors"
+                              title={`Transfer ID: ${escrow.transferId.substring(0, 20)}...`}
+                            >
+                              Check Status
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <button
                       onClick={() => handleReleaseEscrow(escrow.id, escrow.order_id)}

@@ -112,6 +112,13 @@ export default function Navbar({ onCartClick, onAuthClick, onAdminClick }: Navba
       roles: ['seller']
     },
     {
+      id: 'payment-settings',
+      label: 'Payment Settings',
+      icon: Settings,
+      action: () => { navigate('/payment-settings'); setShowCommands(false); },
+      roles: ['seller']
+    },
+    {
       id: 'admin',
       label: 'Admin Panel',
       icon: Settings,

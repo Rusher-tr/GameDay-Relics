@@ -40,6 +40,13 @@ const userSchema = new Schema(
       accountNumber: String, 
       accountName: String,
       stripeAccountId: String, 
+      stripeConnectedAccountId: String, // Connected account ID for automated payouts
+      stripeOnboardingStatus: { // 'pending', 'completed', 'rejected'
+        type: String,
+        enum: ['pending', 'completed', 'rejected'],
+        default: 'pending'
+      },
+      stripeOnboardingUrl: String, // Last generated onboarding URL
     },
     refreshToken: {
       type: String,

@@ -1,7 +1,13 @@
 // routes/payment.routes.js
 import express from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { createCheckoutSession_INTERNAL, handlePaymentCancel } from "../controllers/payment.controller.js";
+import {
+  createCheckoutSession_INTERNAL,
+  handlePaymentCancel,
+  createStripeConnectLink,
+  getStripeAccountStatus,
+  disconnectStripeAccount,
+} from "../controllers/payment.controller.js";
 import { stripe } from "../utils/stripe.js";
 import { Order } from "../models/order.models.js";
 import { APIError } from "../utils/Apierror.js";
@@ -84,6 +90,43 @@ router.post(
   "/cancel-order",
   verifyJWT,
   handlePaymentCancel
+);
+
+/**
+ * Stripe Connect Endpoints for Seller Onboarding
+ */
+
+/**
+ * POST /api/v1/payment/connect/create-link
+ * Create Stripe Connect onboarding link for seller
+ * Requires: Seller authentication
+ */
+router.post(
+  "/connect/create-link",
+  verifyJWT,
+  createStripeConnectLink
+);
+
+/**
+ * GET /api/v1/payment/connect/status
+ * Get seller's Stripe account connection status
+ * Requires: Seller authentication
+ */
+router.get(
+  "/connect/status",
+  verifyJWT,
+  getStripeAccountStatus
+);
+
+/**
+ * POST /api/v1/payment/connect/disconnect
+ * Disconnect seller's Stripe account
+ * Requires: Seller authentication
+ */
+router.post(
+  "/connect/disconnect",
+  verifyJWT,
+  disconnectStripeAccount
 );
 
 export default router;

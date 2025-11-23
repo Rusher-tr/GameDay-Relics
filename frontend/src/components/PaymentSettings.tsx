@@ -45,10 +45,11 @@ export default function PaymentSettings({ onUpdate }: PaymentSettingsProps) {
       }
     } catch (err: any) {
       console.error('Error fetching payment settings:', err);
-      // Don't show error if settings don't exist yet
-      if (err?.response?.status !== 404) {
+      // Don't show error for 403/404 - user may not have set payment settings yet
+      if (err?.response?.status !== 404 && err?.response?.status !== 403) {
         setError(err?.response?.data?.message || 'Failed to load payment settings');
       }
+      // Silently continue - user can set these fields
     } finally {
       setFetchLoading(false);
     }

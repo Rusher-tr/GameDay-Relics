@@ -6,6 +6,7 @@ import { Product } from "../models/product.models.js";
 import { Order } from "../models/order.models.js";
 import { Auditlog } from "../models/auditlog.models.js";
 import { Dispute } from "../models/dispute.models.js";
+import { stripe } from "../utils/stripe.js";
 
 // Working
 const forceCancelOrder = asyncHandler(async (req, res) => {
@@ -345,40 +346,95 @@ const releaseEscrowPayment = asyncHandler(async (req, res) => {
     throw new APIError(404, "Seller not found");
   }
 
-  // Check if seller has configured payment settings
-  if (!seller.paymentGateway) {
-    throw new APIError(400, "Seller has not configured payment settings. Cannot release escrow.");
-  }
-
   // Release escrow
   order.escrowRelease = true;
   order.status = "Completed";
-  await order.save();
+  order.payoutStatus = "pending";
+  order.payoutInitiatedAt = new Date();
 
-  // Create audit log with payment gateway info
-  await Auditlog.create({
-    action: `Escrow Released - Payment to ${seller.paymentGateway}`,
-    amount: order.amount,
-    sellerId: order.sellerId,
-    userId: adminId,
-  });
+  // Check if seller has Stripe connected account
+  const connectedAccountId = seller.paymentDetails?.stripeConnectedAccountId;
 
-  // Return order with seller payment details for admin to process payment
-  const responseData = {
-    order,
-    sellerPaymentInfo: {
-      sellerId: seller._id,
-      sellerName: seller.username,
-      sellerEmail: seller.email,
-      paymentGateway: seller.paymentGateway,
-      paymentDetails: seller.paymentDetails,
-      amount: order.amount,
+  if (connectedAccountId) {
+    // Automated transfer via Stripe Connected Account
+    try {
+      const transfer = await stripe.transfers.create({
+        amount: Math.round(order.amount * 100), // Amount in cents
+        currency: "pkr",
+        destination: connectedAccountId,
+        metadata: {
+          orderId: order._id.toString(),
+          sellerId: seller._id.toString(),
+        },
+        description: `Payment for order ${order._id}`,
+      });
+
+      order.transferId = transfer.id;
+      order.payoutStatus = "succeeded";
+      order.payoutCompletedAt = new Date();
+
+      // Create audit log for automated transfer
+      await Auditlog.create({
+        action: `Automated Stripe Transfer - Order ${order._id}`,
+        amount: order.amount,
+        sellerId: order.sellerId,
+        userId: adminId,
+      });
+
+      await order.save();
+
+      return res.status(200).json(
+        new ApiResponse(200, {
+          order,
+          paymentMethod: "stripe_connected_account",
+          transfer: {
+            id: transfer.id,
+            amount: transfer.amount / 100,
+            status: transfer.status,
+          },
+        }, "Escrow payment transferred successfully via Stripe Connect")
+      );
+    } catch (stripeError) {
+      console.error("[Stripe Transfer Error]", stripeError);
+      // Fall back to manual payment if transfer fails
+      order.payoutStatus = "failed";
+      await order.save();
+      throw new APIError(500, `Stripe transfer failed: ${stripeError.message}`);
     }
-  };
+  } else {
+    // Manual payment fallback (seller hasn't connected Stripe account)
+    if (!seller.paymentGateway) {
+      throw new APIError(400, "Seller has not configured payment settings. Cannot release escrow.");
+    }
 
-  return res.status(200).json(
-    new ApiResponse(200, responseData, "Escrow payment released successfully. Please process payment to seller using the provided payment details.")
-  );
+    // Create audit log with payment gateway info
+    await Auditlog.create({
+      action: `Escrow Released - Manual Payment to ${seller.paymentGateway}`,
+      amount: order.amount,
+      sellerId: order.sellerId,
+      userId: adminId,
+    });
+
+    await order.save();
+
+    // Return order with seller payment details for admin to process payment manually
+    const responseData = {
+      order,
+      paymentMethod: "manual",
+      sellerPaymentInfo: {
+        sellerId: seller._id,
+        sellerName: seller.username,
+        sellerEmail: seller.email,
+        paymentGateway: seller.paymentGateway,
+        paymentDetails: seller.paymentDetails,
+        amount: order.amount,
+      }
+    };
+
+    return res.status(200).json(
+      new ApiResponse(200, responseData, "Escrow payment released for manual processing. Please process payment to seller using the provided payment details.")
+    );
+  }
 });
 
 // Get all disputes
@@ -758,6 +814,60 @@ const getAllAuditLogs = asyncHandler(async (req, res) => {
   }
 });
 
+// Check Stripe transfer status and update order if needed
+const checkTransferStatus = asyncHandler(async (req, res) => {
+  const adminId = req.user._id;
+  const { orderId } = req.params;
+
+  if (!adminId) {
+    throw new APIError(400, "Authentication Error");
+  }
+
+  const adminCheck = await User.findById(adminId);
+  if (!adminCheck || adminCheck.role !== "admin") {
+    throw new APIError(403, "Unauthorized: Admin access required");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new APIError(404, "Order not found");
+  }
+
+  if (!order.transferId) {
+    throw new APIError(400, "No Stripe transfer associated with this order");
+  }
+
+  try {
+    const transfer = await stripe.transfers.retrieve(order.transferId);
+
+    // Update order status based on transfer status
+    if (transfer.status === "succeeded" && order.payoutStatus !== "succeeded") {
+      order.payoutStatus = "succeeded";
+      order.payoutCompletedAt = new Date();
+      await order.save();
+    } else if (transfer.status === "failed" && order.payoutStatus !== "failed") {
+      order.payoutStatus = "failed";
+      await order.save();
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        transfer: {
+          id: transfer.id,
+          amount: transfer.amount / 100,
+          currency: transfer.currency,
+          status: transfer.status,
+          created: transfer.created,
+          destination: transfer.destination,
+        },
+        orderPayoutStatus: order.payoutStatus,
+      }, "Transfer status retrieved successfully")
+    );
+  } catch (error) {
+    console.error("[Check Transfer Status Error]", error);
+    throw new APIError(500, `Failed to check transfer status: ${error.message}`);
+  }
+});
 
 export {
   forceCancelOrder,
@@ -774,5 +884,6 @@ export {
   processDisputeRefund,
   releaseEscrowForDispute,
   resolveDispute,
-  getAllAuditLogs
+  getAllAuditLogs,
+  checkTransferStatus
 };

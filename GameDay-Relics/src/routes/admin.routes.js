@@ -16,7 +16,8 @@ import {
     processDisputeRefund,
     releaseEscrowForDispute,
     resolveDispute,
-    getAllAuditLogs
+    getAllAuditLogs,
+    checkTransferStatus
 } from "../controllers/admin.controller.js";
 
 const router = Router();
@@ -31,6 +32,7 @@ router.delete("/users/:id/force-delete", verifyJWT, authorizeRoles("admin"), for
 
 router.get("/escrow-payments", verifyJWT, authorizeRoles("admin"), getEscrowPayments);
 router.post("/escrow/:escrowId/release", verifyJWT, authorizeRoles("admin"), releaseEscrowPayment);
+router.get("/orders/:orderId/transfer-status", verifyJWT, authorizeRoles("admin"), checkTransferStatus);
 router.get("/disputes", verifyJWT, authorizeRoles("admin"), getAllDisputes);
 router.get("/disputes/:disputeId", verifyJWT, authorizeRoles("admin"), getDisputeDetails);
 router.post("/disputes/:disputeId/resolve", verifyJWT, authorizeRoles("admin"), resolveDispute);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Trash2, Package, Image as ImageIcon, Plus } from 'lucide-react';
+import { Trash2, Package, Image as ImageIcon, Plus, CreditCard } from 'lucide-react';
 import { Product } from '../types';
 import { toast } from 'react-toastify';
 import api from '../lib/api';
@@ -94,13 +94,22 @@ export default function SellerProductsPage() {
                             <h1 className="text-3xl font-black text-slate-900">My Products</h1>
                             <p className="text-slate-600 mt-1">Manage your product listings</p>
                         </div>
-                        <button
-                            onClick={() => navigate('/list-product')}
-                            className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                        >
-                            <Plus className="h-5 w-5" />
-                            <span>List New Product</span>
-                        </button>
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={() => navigate('/payment-settings')}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                            >
+                                <CreditCard className="h-5 w-5" />
+                                <span>Payment Settings</span>
+                            </button>
+                            <button
+                                onClick={() => navigate('/list-product')}
+                                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                            >
+                                <Plus className="h-5 w-5" />
+                                <span>List New Product</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -77,6 +77,32 @@ const orderSchema = new Schema(
       type: Date,
       default: null,
     },
+    transferId: {
+      type: String,
+      default: null,
+    },
+    payoutStatus: {
+      type: String,
+      enum: ["pending", "succeeded", "failed"],
+      default: "pending",
+    },
+    payoutInitiatedAt: {
+      type: Date,
+      default: null,
+    },
+    payoutCompletedAt: {
+      type: Date,
+      default: null,
+    },
+    shippingAddress: {
+      type: {
+        street: String,
+        city: String,
+        postalCode: String,
+        country: String,
+      },
+      default: {},
+    },
   },
   { timestamps: true }
 );

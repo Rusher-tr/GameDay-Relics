@@ -12,6 +12,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedDeliveryOptions, setSelectedDeliveryOptions] = useState<string[]>([]);
+  const [shippingAddress, setShippingAddress] = useState({
+    street: '',
+    city: '',
+    postalCode: '',
+    country: ''
+  });
 
   const deliveryGateways = ['DHL', 'FedEx', 'TCS', 'Leopard', 'M&P'];
 
@@ -54,6 +60,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country) {
+      setError('Please fill in all shipping address fields');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -68,19 +79,14 @@ export default function CheckoutPage() {
       const product = items[0];
 
       // Create order - backend will create Stripe session and return checkout URL
-      const response = await api.post('/orders/create', {
-        productId: product._id
+      const response = await api.post<{ success: boolean; checkoutUrl: string; order: any }>('/orders/create', {
+        productId: product._id,
+        shippingAddress,
+        deliveryGatewayOptions: selectedDeliveryOptions
       });
 
       // Backend returns: { success: true, order: {...}, checkoutUrl: "stripe.com/..." }
       if (response.data.success && response.data.checkoutUrl) {
-        const orderId = response.data.order._id;
-
-        // Save delivery gateway selection to the order
-        await api.post(`/orders/${orderId}/select-delivery`, {
-          deliveryGatewayOptions: selectedDeliveryOptions
-        });
-
         // Redirect to Stripe checkout page
         window.location.href = response.data.checkoutUrl;
       } else {
@@ -165,6 +171,57 @@ export default function CheckoutPage() {
                 {selectedDeliveryOptions.length > 0 && (
                   <p className="text-xs text-green-600 mt-2">✓ Selected: {selectedDeliveryOptions.join(', ')}</p>
                 )}
+              </div>
+
+              {/* Shipping Address */}
+              <div className="bg-white p-8 rounded-xl border border-slate-200">
+                <div className="flex items-center space-x-2 mb-6">
+                  <Truck className="h-6 w-6 text-slate-700" />
+                  <h2 className="text-xl font-bold text-slate-900">Shipping Address</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Street Address</label>
+                    <input
+                      type="text"
+                      value={shippingAddress.street}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
+                    <input
+                      type="text"
+                      value={shippingAddress.city}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="New York"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Postal Code</label>
+                    <input
+                      type="text"
+                      value={shippingAddress.postalCode}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="10001"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Country</label>
+                    <input
+                      type="text"
+                      value={shippingAddress.country}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="United States"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Payment Section */}

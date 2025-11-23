@@ -13,9 +13,17 @@ import { createCheckoutSession_INTERNAL } from "./payment.controller.js";
 const createOrder = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
   const userRole = req.user.role;
-  const productId = req.body.productId;
+  const { productId, shippingAddress, deliveryGatewayOptions } = req.body;
 
   if (!buyerId || !productId) throw new APIError(400, "Missing buyerId or productId");
+
+  if (!shippingAddress || !shippingAddress.street || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country) {
+    throw new APIError(400, "Missing or incomplete shipping address");
+  }
+
+  if (!deliveryGatewayOptions || !Array.isArray(deliveryGatewayOptions) || deliveryGatewayOptions.length === 0) {
+    throw new APIError(400, "Please select at least one delivery gateway option");
+  }
 
   if (userRole === 'seller') {
     throw new APIError(403, "Sellers cannot purchase products. Only buyers and admins can create orders.");
@@ -37,6 +45,8 @@ const createOrder = asyncHandler(async (req, res) => {
   const sellerId = product.sellerId;
   const amount = product.price;
 
+  console.log('🔍 Creating order with shippingAddress:', shippingAddress);
+
   const createdOrder = await Order.create({
     buyerId,
     sellerId,
@@ -44,11 +54,16 @@ const createOrder = asyncHandler(async (req, res) => {
     status: "pending",
     amount,
     escrowRelease: false,
-    deliveryGatewayOptions: ["DHL", "FedEx", "TCS", "Leopard", "M&P"],
+    deliveryGatewayOptions: deliveryGatewayOptions,
     shippingProvider: null,
     trackingNumber: null,
     transactionId: null,
+    shippingAddress,
   });
+
+  console.log('🔍 Order created successfully!');
+  console.log('🔍 Created order ID:', createdOrder._id);
+  console.log('🔍 Created order shippingAddress:', createdOrder.shippingAddress);
 
   const session = await createCheckoutSession_INTERNAL(buyerId, createdOrder._id);
 
@@ -191,7 +206,18 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
 
   const orders = await Order.find({
     sellerId,
-  }).populate("productId").populate("buyerId", "username email").sort({ createdAt: -1 });
+  })
+    .populate("productId")
+    .populate("buyerId", "username email")
+    .lean() // Convert to plain JS objects to ensure all fields are serialized properly
+    .sort({ createdAt: -1 });
+
+  console.log('🔍 Backend - Total orders found:', orders.length);
+  if (orders.length > 0) {
+    console.log('🔍 Backend - First order ID:', orders[0]._id);
+    console.log('🔍 Backend - First order shippingAddress:', orders[0].shippingAddress);
+    console.log('🔍 Backend - First order full data:', JSON.stringify(orders[0], null, 2));
+  }
 
   if (!orders || orders.length === 0) {
     throw new APIError(404, "No Orders Found for this Seller", null);
@@ -311,7 +337,7 @@ const markBuyerSatisfaction = asyncHandler(async (req, res) => {
   }
 
   // Change status to in_transit to show package is on the way
-  // order.status = "in_transit";
+  order.status = "in_transit";
 
   // Set auto-satisfaction date to 7 days from now
   const autoSatDate = new Date();

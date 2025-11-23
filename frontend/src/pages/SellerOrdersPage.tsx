@@ -4,7 +4,6 @@ import { Package, Clock, Truck, CheckCircle, XCircle, AlertCircle, DollarSign, R
 import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Product } from '../types';
-import PaymentSettings from '../components/PaymentSettings';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 interface Order {
@@ -29,6 +28,12 @@ interface Order {
   cancelledReason: string | null;
   createdAt: string;
   updatedAt: string;
+  shippingAddress?: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
 }
 
 export default function SellerOrdersPage() {
@@ -37,7 +42,6 @@ export default function SellerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showPaymentSettings, setShowPaymentSettings] = useState(false);
   const [selectedShipping, setSelectedShipping] = useState<{ [key: string]: { provider: string; trackingNumber: string } }>({});
   const [submittingShipping, setSubmittingShipping] = useState<string | null>(null);
 
@@ -45,7 +49,10 @@ export default function SellerOrdersPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/orders/seller');
+      const response = await api.get<{ data: Order[] }>('/orders/seller');
+      console.log('🔍 Seller Orders Response:', response.data);
+      console.log('🔍 First Order:', response.data.data?.[0]);
+      console.log('🔍 First Order ShippingAddress:', response.data.data?.[0]?.shippingAddress);
       setOrders(response.data.data || []);
     } catch (err: any) {
       console.error('Error fetching seller orders:', err);
@@ -243,7 +250,7 @@ export default function SellerOrdersPage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowPaymentSettings(!showPaymentSettings)}
+              onClick={() => navigate('/payment-settings')}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
             >
               <Settings className="h-5 w-5" />
@@ -259,13 +266,6 @@ export default function SellerOrdersPage() {
             </button>
           </div>
         </div>
-
-        {/* Payment Settings Section */}
-        {showPaymentSettings && (
-          <div className="mb-8">
-            <PaymentSettings onUpdate={() => setShowPaymentSettings(false)} />
-          </div>
-        )}
 
         {/* Earnings Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -325,6 +325,14 @@ export default function SellerOrdersPage() {
                           <p className="text-sm text-slate-600 mb-2">
                             Buyer: {order.buyerId?.username || 'Unknown'}
                           </p>
+                          {order.shippingAddress && (
+                            <div className="mb-2 p-2 bg-slate-50 rounded text-sm text-slate-700">
+                              <p className="font-semibold text-xs text-slate-500 uppercase tracking-wider mb-1">Shipping Address</p>
+                              <p>{order.shippingAddress.street}</p>
+                              <p>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
+                              <p>{order.shippingAddress.country}</p>
+                            </div>
+                          )}
                           <div className="flex items-center gap-3 text-sm text-slate-500">
                             <span>Order #{order._id.slice(-8)}</span>
                             <span>•</span>
@@ -405,16 +413,16 @@ export default function SellerOrdersPage() {
                         const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                         return daysRemaining > 0 && daysRemaining <= 7 ? (
                           <div className={`rounded-lg p-3 border ${daysRemaining <= 2
-                              ? 'bg-red-50 border-red-200'
-                              : daysRemaining <= 4
-                                ? 'bg-orange-50 border-orange-200'
-                                : 'bg-yellow-50 border-yellow-200'
+                            ? 'bg-red-50 border-red-200'
+                            : daysRemaining <= 4
+                              ? 'bg-orange-50 border-orange-200'
+                              : 'bg-yellow-50 border-yellow-200'
                             }`}>
                             <p className={`text-sm font-semibold ${daysRemaining <= 2
-                                ? 'text-red-900'
-                                : daysRemaining <= 4
-                                  ? 'text-orange-900'
-                                  : 'text-yellow-900'
+                              ? 'text-red-900'
+                              : daysRemaining <= 4
+                                ? 'text-orange-900'
+                                : 'text-yellow-900'
                               }`}>
                               ⚠️ Urgent: Confirm shipping within {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} or this order will be automatically cancelled!
                             </p>

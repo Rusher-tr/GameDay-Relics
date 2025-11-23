@@ -26,6 +26,7 @@ import MyOrdersPage from './pages/MyOrdersPage';
 import SellerOrdersPage from './pages/SellerOrdersPage';
 import ListProductPage from './pages/ListProductPage';
 import SellerProductsPage from './pages/SellerProductsPage';
+import PaymentSettingsPage from './pages/PaymentSettingsPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ShopPage from './pages/ShopPage';
 import LoginPage from './pages/LoginPage';
@@ -115,6 +116,7 @@ function AppContent() {
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/seller-orders" element={<SellerOrdersPage />} />
         <Route path="/seller-products" element={<SellerProductsPage />} />
+        <Route path="/payment-settings" element={<PaymentSettingsPage />} />
         <Route path="/list-product" element={<ListProductPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
       </Routes>
