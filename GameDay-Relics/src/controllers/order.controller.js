@@ -232,7 +232,7 @@ const getOrdersBySeller = asyncHandler(async (req, res) => {
 const raiseDispute = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
   const orderId = req.params.id;
-  const { reason, inspectionProvider, inspectionCertificationId, inspectionUrl } = req.body;
+  const { reason, description, inspectionProvider, inspectionCertificationId, inspectionUrl } = req.body;
 
   if (!(buyerId && orderId)) {
     throw new APIError(400, "Authentication Error, Try Refresing Page OR Login Again");
@@ -272,9 +272,9 @@ const raiseDispute = asyncHandler(async (req, res) => {
     sellerId: order.sellerId,
     evidence,
     reason,
+    description: description || "",
     status: "Open",
     resolvedBy: null,
-    evidence,
     inspectionCertificationId: inspectionCertificationId || null,
     inspectionProvider: inspectionProvider || null,
     inspectionUrl: inspectionUrl || null,
