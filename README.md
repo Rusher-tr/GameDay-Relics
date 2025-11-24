@@ -4,7 +4,7 @@
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
@@ -20,7 +20,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 ### Core Features
 - **User Authentication**: Secure JWT-based authentication with role-based access control (Buyer, Seller, Admin)
@@ -55,7 +55,7 @@
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Backend
 - **Runtime**: Node.js (v18+)
@@ -78,7 +78,7 @@
 
 ---
 
-## 📦 Prerequisites
+## Prerequisites
 
 Before you begin, ensure you have the following installed on your system:
 
@@ -93,7 +93,7 @@ Before you begin, ensure you have the following installed on your system:
 
 ---
 
-## 🚀 Installation
+## Installation
 
 Follow these steps to set up the project on your local machine:
 
@@ -143,7 +143,7 @@ npm install
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 The project includes a `.env` file in the `GameDay-Relics` directory. This file contains all necessary environment variables for the project to run.
 
@@ -177,11 +177,11 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 ```
 
-> **Note for Teacher/Grader**: The `.env` file with working credentials is included in this repository for grading purposes. In production, this file should NEVER be committed to version control.
+> The `.env` file with working credentials is included in this repository for grading purposes. In production, this file should NEVER be committed to version control.
 
 ---
 
-## ▶️ Running the Application
+## Running the Application
 
 ### Start the Backend Server
 
@@ -218,7 +218,7 @@ http://localhost:5173
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 GameDay-Relics/
@@ -339,7 +339,7 @@ GameDay-Relics/
 
 ---
 
-## 👥 User Roles
+## User Roles
 
 ### 1. **Buyer**
 - Browse and search products
@@ -365,7 +365,7 @@ GameDay-Relics/
 
 ---
 
-## 💳 Payment Gateways
+## Payment Gateways
 
 ### Supported Payment Methods
 
@@ -378,7 +378,7 @@ Sellers can configure their preferred payment gateway in the seller dashboard se
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -408,9 +408,10 @@ Sellers can configure their preferred payment gateway in the seller dashboard se
 
 ---
 
-## 📝 Testing Credentials
+## Testing Credentials
 
 For grading/testing purposes, you can create test accounts with these roles:
+use the postman to hit route yourlocalhostaddress/api/v/users/register
 
 ### Create Admin Account
 ```javascript
@@ -446,21 +447,12 @@ For grading/testing purposes, you can create test accounts with these roles:
 
 ---
 
-## 📄 License
-
+## License
 This project is created for educational purposes as part of a university assignment.
 
 ---
 
-## 👨‍💻 Author
-
-**Ahmer**  
-Full Stack Developer  
-Contact: [Your Email/GitHub]
-
----
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - MongoDB Atlas for database hosting
 - Cloudinary for image management
@@ -469,10 +461,9 @@ Contact: [Your Email/GitHub]
 
 ---
 
-## 📞 Support
+## Support
 
 For any questions or issues regarding this project, please contact the repository owner or create an issue on GitHub.
 
 ---
 
-**Happy Coding! 🚀**
