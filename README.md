@@ -235,7 +235,8 @@ GameDay-Relics/
 │   │   │   └── user.controller.js
 │   │   ├── middlewares/            # Authentication & error handling
 │   │   │   ├── auth.middleware.js
-│   │   │   └── multer.middleware.js
+│   │   │   ├── multer.middleware.js
+|   |   |   └── role.middleware.js
 │   │   ├── models/                 # Mongoose schemas
 │   │   │   ├── user.models.js
 │   │   │   ├── product.models.js
