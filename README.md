@@ -150,6 +150,8 @@ The project includes a `.env` file in the `GameDay-Relics` directory. This file 
 ### Required Environment Variables
 
 Create or verify the `.env` file in the `GameDay-Relics` folder:
+.env is included in Project Folder but if you encounter any error while cloning, use the following file 
+as reference to make one quickly for backend and for frontend, its VITE_API_URL=http://localhost:8000/api/v
 
 ```env
 # Server Configuration
@@ -233,7 +235,8 @@ GameDay-Relics/
 │   │   │   └── user.controller.js
 │   │   ├── middlewares/            # Authentication & error handling
 │   │   │   ├── auth.middleware.js
-│   │   │   └── multer.middleware.js
+│   │   │   ├── multer.middleware.js
+|   |   |   └── role.middleware.js
 │   │   ├── models/                 # Mongoose schemas
 │   │   │   ├── user.models.js
 │   │   │   ├── product.models.js
