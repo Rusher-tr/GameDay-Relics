@@ -39,6 +39,9 @@ import adminRouter from "./routes/admin.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 
+app.use("/healthcheck",(req,res)=>{
+  res.status(200).json({message:"Server is running fine"})
+})
 app.use("/api/v/payment", paymentRoutes);
 app.use("/api/v/order", orderRouter);
 app.use("/webhook", webhookRoutes);
