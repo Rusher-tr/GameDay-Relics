@@ -31,9 +31,9 @@ export default function Footer() {
             <div>
               <h4 className="font-georgia font-bold text-lg mb-4" style={{ color: '#1c452a' }}>Contact</h4>
               <ul className="space-y-2 font-inter text-sm" style={{ color: '#1c452a' }}>
-                <li>Phone: +92 (317) 456-5090</li>
-                <li>Phone: +92 (331) 287-3585</li>
-                <li>Phone: +92 (370) 126-5737</li>
+                <li>Phone: Ahmer    [Backend Developer] +92 (317) 456-5090</li>
+                <li>Phone: Maaz     [Devops Engineer  ] +92 (331) 287-3585</li>
+                <li>Phone: Abdullah [Frontend Developer] +92 (370) 126-5737</li>
                 <li>Email: syedahmerali12789@gmail.com</li>
                 <li>Address: Karachi, Pakistan</li>
               </ul>
